@@ -26,10 +26,16 @@ public class RobotPlayer {
       Direction.NORTHWEST,
   };
 
-  static final UnitType[] SPAWN_LIST = {
+  static final UnitType[] INITIAL_SPAWN_LIST = {
       UnitType.SOLDIER,
       UnitType.SOLDIER,
       UnitType.MOPPER,
+  };
+  static final UnitType[] SPAWN_LIST = {
+      UnitType.MOPPER,
+      UnitType.SOLDIER,
+      UnitType.MOPPER,
+      UnitType.SOLDIER,
   };
   static int spawnCounter;
 
@@ -160,8 +166,8 @@ public class RobotPlayer {
               .map(x -> x.getMapLocation()))),
       // Paint resupply
       new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() - 50 < (rc.getType().paintCapacity - 50) * FREE_PAINT_TARGET)),
-      // Soldier: build ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(_x -> rc.getType() == UnitType.SOLDIER)),
+      // Soldier/mopper: target ruins
+      new TargetType(() -> Optional.ofNullable(ruinTarget)),
       // Exploration
       new TargetType(() ->
           Optional.ofNullable(exploreTarget)
@@ -381,6 +387,7 @@ public class RobotPlayer {
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
+    spawnCounter = rng() % SPAWN_LIST.length;
 
     while (true) {
       try {
@@ -409,11 +416,24 @@ public class RobotPlayer {
             doAttack();
 
             if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)) ruinTarget = null;
+            if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) {
+              for (MapInfo patternTile : rc.senseNearbyMapInfos(ruinTarget, 8)) {
+                if (isEnemy(patternTile.getPaint())) {
+                  ruinTarget = null;
+                }
+              }
+            }
 
             // Try to build ruins
             if (rc.isActionReady()) {
+              a:
               for (var ruin : rc.senseNearbyRuins(-1)) {
                 if (rc.senseRobotAtLocation(ruin) != null) continue;
+                for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
+                  if (isEnemy(patternTile.getPaint())) {
+                    continue a;
+                  }
+                }
                 // Okay we pick this ruin
                 ruinTarget = ruin;
 
@@ -424,14 +444,6 @@ public class RobotPlayer {
                 if (rc.senseMapInfo(shouldBeMarked).getMark() == PaintType.EMPTY && rc.canMarkTowerPattern(type, ruin)) {
                   rc.markTowerPattern(type, ruin);
                 }
-                // Fill in any spots in the pattern with the appropriate paint.
-//                for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-//                  if (patternTile.getMark() != patternTile.getPaint() && patternTile.getMark() != PaintType.EMPTY) {
-//                    boolean useSecondaryColor = patternTile.getMark() == PaintType.ALLY_SECONDARY;
-//                    if (rc.canAttack(patternTile.getMapLocation()))
-//                      rc.attack(patternTile.getMapLocation(), useSecondaryColor);
-//                  }
-//                }
                 // Complete the ruin if we can.
                 if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin)) {
                   rc.completeTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin);
@@ -459,15 +471,34 @@ public class RobotPlayer {
 
           }
           case MOPPER -> {
-            // Remove enemy paint
-            if (rc.isActionReady()) {
-              for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
-                if (isEnemy(tile.getPaint()) && rc.canAttack(tile.getMapLocation())) {
-                  rc.attack(tile.getMapLocation());
-                  break;
+            // Target ruins the enemy is trying to build
+            if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) ruinTarget = null;
+            a:
+            for (var ruin : rc.senseNearbyRuins(-1)) {
+              if (rc.senseRobotAtLocation(ruin) != null) continue;
+              for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
+                if (isEnemy(patternTile.getPaint())) {
+                  ruinTarget = ruin;
+                  break a;
                 }
               }
             }
+
+            // Remove enemy paint
+            MapLocation toMop = null;
+            var isInRuin = false;
+            if (rc.isActionReady()) {
+              for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
+                if (isEnemy(tile.getPaint()) && rc.canAttack(tile.getMapLocation())) {
+                  var ruin = ruinTarget != null && ruinTarget.isWithinDistanceSquared(tile.getMapLocation(), 8);
+                  if (!isInRuin || ruin) {
+                    toMop = tile.getMapLocation();
+                    isInRuin = ruin;
+                  }
+                }
+              }
+            }
+            rc.attack(toMop);
 
             // Resupply nearby soldiers
             if (rc.getPaint() > 50 && rc.isActionReady()) {
@@ -491,7 +522,7 @@ public class RobotPlayer {
             doAttack();
 
             // Try to spawn a unit
-            var toSpawn = SPAWN_LIST[spawnCounter];
+            var toSpawn = rc.getRoundNum() < 4 ? UnitType.SOLDIER : SPAWN_LIST[spawnCounter];
             for (var dir : MOVE_DIRECTIONS) {
               if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
                 rc.buildRobot(toSpawn, rc.getLocation().add(dir));
