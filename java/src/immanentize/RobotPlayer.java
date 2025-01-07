@@ -498,7 +498,8 @@ public class RobotPlayer {
                 }
               }
             }
-            rc.attack(toMop);
+            if (toMop != null)
+              rc.attack(toMop);
 
             // Resupply nearby soldiers
             if (rc.getPaint() > 50 && rc.isActionReady()) {
