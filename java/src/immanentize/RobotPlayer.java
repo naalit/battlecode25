@@ -8,7 +8,7 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-@SuppressWarnings("Convert2MethodRef")
+@SuppressWarnings({"Convert2MethodRef", "CallToPrintStackTrace"})
 public class RobotPlayer {
   static RobotController rc;
 
@@ -28,8 +28,8 @@ public class RobotPlayer {
 
   static final UnitType[] SPAWN_LIST = {
       UnitType.SOLDIER,
-      UnitType.MOPPER,
       UnitType.SOLDIER,
+      UnitType.MOPPER,
   };
   static int spawnCounter;
 
@@ -62,15 +62,15 @@ public class RobotPlayer {
     if (!rc.isMovementReady()) {
       return;
     }
-    if (!target.equals(cachedTarget) || target.isWithinDistanceSquared(rc.getLocation(), 2)) {
+    if (cachedTarget == null || target.distanceSquaredTo(cachedTarget) > 2 || target.isWithinDistanceSquared(rc.getLocation(), 2)) {
       cachedLocs.clear();
-      cachedTarget = target;
     }
-    rc.setIndicatorLine(rc.getLocation(), target, 0, 255, 0);
+    cachedTarget = target;
 
     var best = Direction.CENTER;
     var bestDist = 100000000;
     var bestPaint = PaintType.ENEMY_PRIMARY;
+    var pDist = rc.getLocation().distanceSquaredTo(target);
     for (var dir : MOVE_DIRECTIONS) {
       if (rc.canMove(dir)) {
         var loc = rc.getLocation().add(dir);
@@ -78,6 +78,10 @@ public class RobotPlayer {
           continue;
         }
         var dist = loc.distanceSquaredTo(target);
+        // TODO do we want this?
+        if (dist > pDist) {
+          continue;
+        }
         var paint = rc.senseMapInfo(loc).getPaint();
         if (bestPaint.isAlly() && !paint.isAlly()) {
           continue;
@@ -131,6 +135,7 @@ public class RobotPlayer {
 
   static MapLocation closestPaintTower;
   static MapLocation closestTower;
+  static MapLocation ruinTarget;
 
   record TargetType(Supplier<Optional<MapLocation>> fun) {
   }
@@ -155,6 +160,8 @@ public class RobotPlayer {
               .map(x -> x.getMapLocation()))),
       // Paint resupply
       new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() - 50 < (rc.getType().paintCapacity - 50) * FREE_PAINT_TARGET)),
+      // Soldier: build ruins
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(_x -> rc.getType() == UnitType.SOLDIER)),
       // Exploration
       new TargetType(() ->
           Optional.ofNullable(exploreTarget)
@@ -172,9 +179,11 @@ public class RobotPlayer {
   static void doMove() throws GameActionException {
     if (target == null || target.distanceSquaredTo(rc.getLocation()) < 2) {
       targetIdx = 10000;
+      target = null;
     }
     if (targetIdx < targets.length && targets[targetIdx].fun.get().isEmpty()) {
       targetIdx = 10000;
+      target = null;
     }
     for (int i = 0; i < targets.length && i <= targetIdx; i++) {
       // messy... :(
@@ -185,20 +194,24 @@ public class RobotPlayer {
         target = x;
       });
     }
+
+    if (nearbyEnemies.length > 0) {
+      microMove();
+    } else {
+      if (targetIdx < 10000) {
+        rc.setIndicatorString("target " + targetIdx);
+        navigate(target);
+      }
+    }
+
     if (targetIdx < 10000) {
-      rc.setIndicatorString("target " + targetIdx);
-      navigate(target);
+      rc.setIndicatorLine(rc.getLocation(), target, 0, 255, 0);
     }
   }
 
   static boolean canPaint(MapInfo tile) throws GameActionException {
-    // TODO hopefully this will change in a future release (will save ~1000bt in doPaint())
-    if (tile.getPaint() == PaintType.EMPTY && tile.isPassable() && !tile.hasRuin()) {
-      var r = rc.senseRobotAtLocation(tile.getMapLocation());
-      return r == null || r.getType().isRobotType();
-    } else {
-      return false;
-    }
+    return (tile.getPaint() == PaintType.EMPTY || (tile.getMark().isAlly() && tile.getPaint().isAlly() && tile.getPaint() != tile.getMark()))
+        && tile.isPassable() && !tile.hasRuin();
   }
 
   static void doPaint_() throws GameActionException {
@@ -232,7 +245,8 @@ public class RobotPlayer {
     if (rc.getPaint() < 55 || !rc.isActionReady()) return;
     // smaller is better
     var loc = rc.getLocation();
-    Comparator<MapInfo> comp = Comparator.comparingInt(x -> x.getMapLocation().distanceSquaredTo(loc));
+    Comparator<MapInfo> comp = Comparator.comparingInt(x -> x.getMark().isAlly() ? 0 : 1);
+    comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(loc));
     if (target != null) {
       comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(target));
     }
@@ -255,6 +269,114 @@ public class RobotPlayer {
         });
     var end = Clock.getBytecodeNum();
     rc.setIndicatorString("paint time (old): " + (end - start) + "bt");
+  }
+
+  record AttackTarget(MapLocation target, double score) {
+  }
+
+  /// Single target only (for towers and soldiers)
+  static Optional<AttackTarget> pickAttackTarget(MapLocation loc) throws GameActionException {
+    if (!rc.isActionReady()) return Optional.empty();
+    if (rc.getType().isRobotType() && rc.getPaint() <= 50) return Optional.empty();
+    final int KILL_VALUE = 200;
+
+    Optional<AttackTarget> best = Optional.empty();
+
+    var targetTowers = !rc.getType().isTowerType();
+    var attackDist = rc.getType().actionRadiusSquared;
+    // TODO tower damage modifiers from defense towers
+    var damage = rc.getType().attackStrength;
+    for (var unit : nearbyEnemies) {
+      if (unit.getType().isTowerType() != targetTowers) continue;
+      if (!unit.location.isWithinDistanceSquared(loc, attackDist)) continue;
+      var score = Math.min(damage, unit.health);
+      if (damage >= unit.health) score += KILL_VALUE;
+      if (best.isEmpty() || score > best.get().score) {
+        best = Optional.of(new AttackTarget(unit.location, score));
+      }
+    }
+
+    return best;
+  }
+
+  static void doAttack() throws GameActionException {
+    pickAttackTarget(rc.getLocation()).ifPresent(x -> {
+      try {
+        if (!rc.canAttack(x.target)) System.out.println("could not attack" + x.target);
+        else rc.attack(x.target);
+      } catch (GameActionException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  static void microMove() throws GameActionException {
+    class MicroLoc {
+      final MapLocation loc;
+      double incomingDamage = 0;
+      int adjacentAllies = 0;
+
+      MicroLoc(MapLocation loc) {
+        this.loc = loc;
+      }
+    }
+
+    var locs = Arrays.stream(Direction.allDirections())
+        .filter(x -> x == Direction.CENTER || rc.canMove(x))
+        .map(x -> new MicroLoc(rc.getLocation().add(x)))
+        .toArray(n -> new MicroLoc[n]);
+    var isTower = rc.getType().isTowerType();
+    for (var unit : nearbyEnemies) {
+      if (unit.type.isTowerType() == isTower) continue;
+      if (unit.type.attackStrength <= 0) continue;
+      for (var loc : locs) {
+        if (unit.location.isWithinDistanceSquared(loc.loc, unit.type.actionRadiusSquared)) {
+          loc.incomingDamage += unit.type.attackStrength;
+        }
+      }
+    }
+    // TODO is this the better way to do it or should we be senseNearbyRobots()-ing for each location?
+    for (var unit : nearbyAllies) {
+      for (var loc : locs) {
+        if (unit.location.isWithinDistanceSquared(loc.loc, 2)) {
+          loc.adjacentAllies += 1;
+        }
+      }
+    }
+    var pTargetDist = target == null ? 0 : rc.getLocation().distanceSquaredTo(target);
+    var best = Arrays.stream(locs)
+        .max(Comparator.comparingDouble(loc -> {
+          try {
+            var tile = rc.senseMapInfo(loc.loc);
+            var score = 0.0;
+            score -= loc.incomingDamage;
+            score += pickAttackTarget(tile.getMapLocation()).map(x -> x.score).orElse(0.0);
+            // Paint penalties
+            // TODO paint/hp tradeoff?
+            score += switch (tile.getPaint()) {
+              case EMPTY -> -1;
+              case ALLY_PRIMARY, ALLY_SECONDARY -> 0;
+              case ENEMY_PRIMARY, ENEMY_SECONDARY -> -2 * (1 + loc.adjacentAllies);
+            };
+            if (target != null) {
+              // Low coefficient, this is meant to be a tiebreaker
+              score -= 0.02 * (tile.getMapLocation().distanceSquaredTo(target) - pTargetDist);
+            }
+            return score;
+          } catch (GameActionException e) {
+            e.printStackTrace();
+            System.out.println("exception in microMove()");
+            return 0;
+          }
+        }));
+    best.ifPresent(x -> rc.setIndicatorString("micro pos: " + x.loc));
+    best.filter(x -> !x.loc.equals(rc.getLocation())).ifPresent(l -> {
+      try {
+        rc.move(rc.getLocation().directionTo(l.loc));
+      } catch (GameActionException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   public static void run(RobotController rc) throws GameActionException {
@@ -283,11 +405,17 @@ public class RobotPlayer {
 
         switch (rc.getType()) {
           case SOLDIER -> {
+            // Attack if possible
+            doAttack();
+
+            if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)) ruinTarget = null;
+
             // Try to build ruins
             if (rc.isActionReady()) {
               for (var ruin : rc.senseNearbyRuins(-1)) {
                 if (rc.senseRobotAtLocation(ruin) != null) continue;
                 // Okay we pick this ruin
+                ruinTarget = ruin;
 
                 var dir = rc.getLocation().directionTo(ruin);
                 // Mark the pattern we need to draw to build a tower here if we haven't already.
@@ -297,19 +425,21 @@ public class RobotPlayer {
                   rc.markTowerPattern(type, ruin);
                 }
                 // Fill in any spots in the pattern with the appropriate paint.
-                for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-                  if (patternTile.getMark() != patternTile.getPaint() && patternTile.getMark() != PaintType.EMPTY) {
-                    boolean useSecondaryColor = patternTile.getMark() == PaintType.ALLY_SECONDARY;
-                    if (rc.canAttack(patternTile.getMapLocation()))
-                      rc.attack(patternTile.getMapLocation(), useSecondaryColor);
-                  }
-                }
+//                for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
+//                  if (patternTile.getMark() != patternTile.getPaint() && patternTile.getMark() != PaintType.EMPTY) {
+//                    boolean useSecondaryColor = patternTile.getMark() == PaintType.ALLY_SECONDARY;
+//                    if (rc.canAttack(patternTile.getMapLocation()))
+//                      rc.attack(patternTile.getMapLocation(), useSecondaryColor);
+//                  }
+//                }
                 // Complete the ruin if we can.
                 if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin)) {
                   rc.completeTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin);
+                  ruinTarget = null;
                   rc.setTimelineMarker("Tower built", 0, 255, 0);
                 } else if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruin)) {
                   rc.completeTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruin);
+                  ruinTarget = null;
                   rc.setTimelineMarker("Tower built", 0, 255, 0);
                 }
 
@@ -356,6 +486,9 @@ public class RobotPlayer {
           }
           default -> {
             // Towers
+
+            // Attack if possible
+            doAttack();
 
             // Try to spawn a unit
             var toSpawn = SPAWN_LIST[spawnCounter];
