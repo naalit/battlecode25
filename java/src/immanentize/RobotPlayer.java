@@ -149,7 +149,7 @@ public class RobotPlayer {
   static MapLocation exploreTarget = null;
   static TargetType[] targets = {
       // Paint resupply - URGENT
-      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() < 50)),
+      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() < 50 || (rc.getPaint() < 55 && rc.getType() == UnitType.SOLDIER))),
       // Mopper: find nearby soldier
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER && rc.getPaint() > 50)
@@ -157,6 +157,8 @@ public class RobotPlayer {
               .filter(x -> x.getType() == UnitType.SOLDIER && x.paintAmount < UnitType.SOLDIER.paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
+      // Soldier/mopper: target ruins
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getType() == UnitType.SOLDIER || !x.isWithinDistanceSquared(rc.getLocation(), 8))),
       // Mopper: find enemy paint
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER)
@@ -166,8 +168,6 @@ public class RobotPlayer {
               .map(x -> x.getMapLocation()))),
       // Paint resupply
       new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() - 50 < (rc.getType().paintCapacity - 50) * FREE_PAINT_TARGET)),
-      // Soldier/mopper: target ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget)),
       // Exploration
       new TargetType(() ->
           Optional.ofNullable(exploreTarget)
@@ -426,35 +426,39 @@ public class RobotPlayer {
 
             // Try to build ruins
             if (rc.isActionReady()) {
-              a:
-              for (var ruin : rc.senseNearbyRuins(-1)) {
-                if (rc.senseRobotAtLocation(ruin) != null) continue;
-                for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-                  if (isEnemy(patternTile.getPaint())) {
-                    continue a;
+              if (ruinTarget == null) {
+                a:
+                for (var ruin : rc.senseNearbyRuins(-1)) {
+                  if (rc.senseRobotAtLocation(ruin) != null) continue;
+                  for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
+                    if (isEnemy(patternTile.getPaint())) {
+                      continue a;
+                    }
                   }
+                  // Okay we pick this ruin
+                  ruinTarget = ruin;
+                  break;
                 }
-                // Okay we pick this ruin
-                ruinTarget = ruin;
+              }
 
-                var dir = rc.getLocation().directionTo(ruin);
+              if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) {
+                var dir = rc.getLocation().directionTo(ruinTarget);
                 // Mark the pattern we need to draw to build a tower here if we haven't already.
-                var shouldBeMarked = ruin.subtract(dir);
+                var shouldBeMarked = ruinTarget.subtract(dir);
                 var type = (rng() % 4) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
-                if (rc.senseMapInfo(shouldBeMarked).getMark() == PaintType.EMPTY && rc.canMarkTowerPattern(type, ruin)) {
-                  rc.markTowerPattern(type, ruin);
+                if (rc.senseMapInfo(shouldBeMarked).getMark() == PaintType.EMPTY && rc.canMarkTowerPattern(type, ruinTarget)) {
+                  rc.markTowerPattern(type, ruinTarget);
                 }
                 // Complete the ruin if we can.
-                if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin)) {
-                  rc.completeTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin);
+                if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruinTarget)) {
+                  rc.completeTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruinTarget);
                   ruinTarget = null;
                   rc.setTimelineMarker("Tower built", 0, 255, 0);
-                } else if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruin)) {
-                  rc.completeTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruin);
+                } else if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruinTarget)) {
+                  rc.completeTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruinTarget);
                   ruinTarget = null;
                   rc.setTimelineMarker("Tower built", 0, 255, 0);
                 }
-
               }
             }
 
@@ -472,7 +476,10 @@ public class RobotPlayer {
           }
           case MOPPER -> {
             // Target ruins the enemy is trying to build
-            if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) ruinTarget = null;
+            if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)
+                && rc.canSenseLocation(ruinTarget.add(rc.getLocation().directionTo(ruinTarget)).add(rc.getLocation().directionTo(ruinTarget)))) {
+              ruinTarget = null;
+            }
             a:
             for (var ruin : rc.senseNearbyRuins(-1)) {
               if (rc.senseRobotAtLocation(ruin) != null) continue;
