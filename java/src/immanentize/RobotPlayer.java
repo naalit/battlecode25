@@ -40,6 +40,8 @@ public class RobotPlayer {
   static int spawnCounter;
 
   static final double FREE_PAINT_TARGET = 0.2;
+  static final double KILL_VALUE = 200;
+  static final double PAINT_VALUE = 1;
 
   static RobotInfo[] nearbyAllies, nearbyEnemies;
 
@@ -280,23 +282,28 @@ public class RobotPlayer {
   record AttackTarget(MapLocation target, double score) {
   }
 
-  /// Single target only (for towers and soldiers)
+  /// Single target only (for towers and soldiers) (also moppers now, just single target attacks not sweeps)
   static Optional<AttackTarget> pickAttackTarget(MapLocation loc) throws GameActionException {
     if (!rc.isActionReady()) return Optional.empty();
-    if (rc.getType().isRobotType() && rc.getPaint() <= 50) return Optional.empty();
-    final int KILL_VALUE = 200;
+    if (rc.getType() == UnitType.SOLDIER && rc.getPaint() <= 50) return Optional.empty();
 
     Optional<AttackTarget> best = Optional.empty();
 
-    var targetTowers = !rc.getType().isTowerType();
+    var isMopper = rc.getType() == UnitType.MOPPER;
+    var targetTowers = !rc.getType().isTowerType() && !isMopper;
     var attackDist = rc.getType().actionRadiusSquared;
     // TODO tower damage modifiers from defense towers
     var damage = rc.getType().attackStrength;
     for (var unit : nearbyEnemies) {
       if (unit.getType().isTowerType() != targetTowers) continue;
       if (!unit.location.isWithinDistanceSquared(loc, attackDist)) continue;
-      var score = Math.min(damage, unit.health);
+      var score = (double) Math.min(damage, unit.health);
       if (damage >= unit.health) score += KILL_VALUE;
+      if (isMopper) {
+        var paint = Math.min(10, unit.paintAmount);
+        // TODO verify that this is true (5 paint to our team regardless of amount of paint stolen) (a dev said they think this is how it works)
+        score = (paint + 5) * PAINT_VALUE;
+      }
       if (best.isEmpty() || score > best.get().score) {
         best = Optional.of(new AttackTarget(unit.location, score));
       }
@@ -310,6 +317,10 @@ public class RobotPlayer {
       try {
         if (!rc.canAttack(x.target)) System.out.println("could not attack" + x.target);
         else rc.attack(x.target);
+
+        if (rc.getType().isTowerType()) {
+          rc.attack(null);
+        }
       } catch (GameActionException e) {
         throw new RuntimeException(e);
       }
@@ -333,11 +344,16 @@ public class RobotPlayer {
         .toArray(n -> new MicroLoc[n]);
     var isTower = rc.getType().isTowerType();
     for (var unit : nearbyEnemies) {
-      if (unit.type.isTowerType() == isTower) continue;
-      if (unit.type.attackStrength <= 0) continue;
+      var damage = (double) Math.min(unit.type.attackStrength, rc.getHealth());
+      if (!isTower && unit.type == UnitType.MOPPER) {
+        damage = (Math.min(rc.getPaint(), 10) + 5) * PAINT_VALUE;
+      } else {
+        if (unit.type.isTowerType() == isTower) continue;
+        if (unit.type.attackStrength <= 0) continue;
+      }
       for (var loc : locs) {
         if (unit.location.isWithinDistanceSquared(loc.loc, unit.type.actionRadiusSquared)) {
-          loc.incomingDamage += unit.type.attackStrength;
+          loc.incomingDamage += damage;
         }
       }
     }
@@ -358,8 +374,7 @@ public class RobotPlayer {
             score -= loc.incomingDamage;
             score += pickAttackTarget(tile.getMapLocation()).map(x -> x.score).orElse(0.0);
             // Paint penalties
-            // TODO paint/hp tradeoff?
-            score += switch (tile.getPaint()) {
+            score += PAINT_VALUE * switch (tile.getPaint()) {
               case EMPTY -> -1;
               case ALLY_PRIMARY, ALLY_SECONDARY -> 0;
               case ENEMY_PRIMARY, ENEMY_SECONDARY -> -2 * (1 + loc.adjacentAllies);
@@ -375,7 +390,7 @@ public class RobotPlayer {
             return 0;
           }
         }));
-    best.ifPresent(x -> rc.setIndicatorString("micro pos: " + x.loc));
+    best.ifPresent(x -> rc.setIndicatorString("micro pos: " + x.loc + " /" + targetIdx));
     best.filter(x -> !x.loc.equals(rc.getLocation())).ifPresent(l -> {
       try {
         rc.move(rc.getLocation().directionTo(l.loc));
@@ -445,7 +460,7 @@ public class RobotPlayer {
                 var dir = rc.getLocation().directionTo(ruinTarget);
                 // Mark the pattern we need to draw to build a tower here if we haven't already.
                 var shouldBeMarked = ruinTarget.subtract(dir);
-                var type = (rng() % 4) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+                var type = (rng() % 3) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
                 if (rc.senseMapInfo(shouldBeMarked).getMark() == PaintType.EMPTY && rc.canMarkTowerPattern(type, ruinTarget)) {
                   rc.markTowerPattern(type, ruinTarget);
                 }
@@ -475,6 +490,9 @@ public class RobotPlayer {
 
           }
           case MOPPER -> {
+            // First attack enemies
+            doAttack();
+
             // Target ruins the enemy is trying to build
             if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)
                 && rc.canSenseLocation(ruinTarget.add(rc.getLocation().directionTo(ruinTarget)).add(rc.getLocation().directionTo(ruinTarget)))) {
