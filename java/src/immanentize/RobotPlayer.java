@@ -159,6 +159,26 @@ public class RobotPlayer {
               .filter(x -> x.getType() == UnitType.SOLDIER && x.paintAmount < UnitType.SOLDIER.paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
+      // Soldier: target unpainted tower squares
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getType() == UnitType.SOLDIER).flatMap(ruin -> {
+        Optional<MapLocation> target = Optional.empty();
+        try {
+          a:
+          for (int x = -2; x < 3; x++) {
+            for (int y = -2; y < 3; y++) {
+              var loc = ruin.translate(x, y);
+              if ((x == 0 && y == 0) || !rc.canSenseLocation(loc)) continue;
+              if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != secondary(loc)) {
+                target = Optional.of(loc);
+                break a;
+              }
+            }
+          }
+        } catch (GameActionException e) {
+          throw new RuntimeException(e);
+        }
+        return target;
+      })),
       // Soldier/mopper: target ruin *corner*
       new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(-2, -2)).filter(x -> !secondary(x.translate(1, 1)))),
       // Soldier/mopper: target ruins
@@ -409,6 +429,7 @@ public class RobotPlayer {
 
     // Lower left corner
     var corner = ruinTarget == null ? null : ruinTarget.translate(-2, -2);
+    // TODO we don't need markers if we use hashes of ruin positions (though it means we can't dynamically decide which to build)
     if (ruinTarget != null && rc.canSenseLocation(corner)) {
       // primary = money, secondary = paint
       var type = (rng() % 3) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
