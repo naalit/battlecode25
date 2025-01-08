@@ -213,6 +213,8 @@ public class RobotPlayer {
   static boolean[][] resourcePattern;
 
   static void doMove() throws GameActionException {
+    if (!rc.isMovementReady()) return;
+
     if (target == null || target.distanceSquaredTo(rc.getLocation()) < 2) {
       targetIdx = 10000;
       target = null;
@@ -334,6 +336,7 @@ public class RobotPlayer {
     });
   }
 
+  ///  Precondition: rc.isMovementReady()
   static void microMove() throws GameActionException {
     class MicroLoc {
       final MapLocation loc;
@@ -389,6 +392,12 @@ public class RobotPlayer {
             if (target != null) {
               // Low coefficient, this is meant to be a tiebreaker
               score -= 0.02 * (tile.getMapLocation().distanceSquaredTo(target) - pTargetDist);
+              // Okay but we do want to incentivize moving
+              // It's kind of an open question when to stay out of danger on our own color and when to move across enemy territory to our target
+              // I'm just going to put a general staying-in-place penalty here though? we'll see how this does
+              if (loc.loc.equals(rc.getLocation())) {
+                score -= 0.1;
+              }
             }
             return score;
           } catch (GameActionException e) {
@@ -397,8 +406,16 @@ public class RobotPlayer {
             return 0;
           }
         }));
-    best.ifPresent(x -> rc.setIndicatorString("micro pos: " + x.loc + " /" + targetIdx));
-    best.filter(x -> !x.loc.equals(rc.getLocation())).ifPresent(l -> {
+    best.filter(x -> {
+      rc.setIndicatorString("micro pos: " + x.loc + " /" + targetIdx);
+      if (x.loc.equals(rc.getLocation())) {
+        // Retarget explore if we can't move forwards
+        exploreTarget = null;
+        return false;
+      } else {
+        return true;
+      }
+    }).ifPresent(l -> {
       try {
         rc.move(rc.getLocation().directionTo(l.loc));
       } catch (GameActionException e) {
