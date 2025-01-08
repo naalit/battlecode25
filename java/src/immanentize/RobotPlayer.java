@@ -159,6 +159,8 @@ public class RobotPlayer {
               .filter(x -> x.getType() == UnitType.SOLDIER && x.paintAmount < UnitType.SOLDIER.paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
+      // Soldier/mopper: target ruin *corner*
+      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(-2, -2)).filter(x -> !secondary(x.translate(1, 1)))),
       // Soldier/mopper: target ruins
       new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getType() == UnitType.SOLDIER || !x.isWithinDistanceSquared(rc.getLocation(), 8))),
       // Mopper: find enemy paint
@@ -183,6 +185,11 @@ public class RobotPlayer {
 
   static MapLocation target = null;
   static int targetIdx;
+
+  record MapColor(boolean secondary) {
+  }
+
+  static MapColor[][] mapColors = new MapColor[60][60];
 
   static void doMove() throws GameActionException {
     if (target == null || target.distanceSquaredTo(rc.getLocation()) < 2) {
@@ -217,35 +224,15 @@ public class RobotPlayer {
     }
   }
 
-  static boolean canPaint(MapInfo tile) throws GameActionException {
-    return (tile.getPaint() == PaintType.EMPTY || (tile.getMark().isAlly() && tile.getPaint().isAlly() && tile.getPaint() != tile.getMark()))
-        && tile.isPassable() && !tile.hasRuin();
+  static boolean secondary(MapLocation map) {
+    var color = mapColors[map.x][map.y];
+    return color != null && color.secondary;
   }
 
-  static void doPaint_() throws GameActionException {
-    // ~2000bt faster
-    var start = Clock.getBytecodeNum();
-    if (rc.getPaint() < 55 || !rc.isActionReady()) return;
-    MapInfo best = null;
-    var bestDistR = 10000000;
-    var bestDistT = 10000000;
-    for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
-      if (!canPaint(tile)) continue;
-      if (best == null) best = tile;
-      var distR = tile.getMapLocation().distanceSquaredTo(rc.getLocation());
-      var distT = target == null ? 10000000 : tile.getMapLocation().distanceSquaredTo(target);
-      if (distR < bestDistR || (distR == bestDistR && distT < bestDistT)) {
-        best = tile;
-        bestDistR = distR;
-        bestDistT = distT;
-      }
-    }
-    if (best != null) {
-      boolean useSecondaryColor = best.getMark() == PaintType.ALLY_SECONDARY;
-      rc.attack(best.getMapLocation(), useSecondaryColor);
-    }
-    var end = Clock.getBytecodeNum();
-    rc.setIndicatorString("paint time (new): " + (end - start) + "bt");
+  static boolean canPaint(MapInfo tile) throws GameActionException {
+    return (tile.getPaint() == PaintType.EMPTY ||
+        (tile.getPaint().isAlly() && mapColors[tile.getMapLocation().x][tile.getMapLocation().y] != null && (tile.getPaint() == PaintType.ALLY_SECONDARY) != secondary(tile.getMapLocation())))
+        && tile.isPassable() && !tile.hasRuin();
   }
 
   static void doPaint() throws GameActionException {
@@ -253,7 +240,7 @@ public class RobotPlayer {
     if (rc.getPaint() < 55 || !rc.isActionReady()) return;
     // smaller is better
     var loc = rc.getLocation();
-    Comparator<MapInfo> comp = Comparator.comparingInt(x -> x.getMark().isAlly() ? 0 : 1);
+    Comparator<MapInfo> comp = Comparator.comparingInt(x -> (mapColors[x.getMapLocation().x][x.getMapLocation().y] != null) ? 0 : 1);
     comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(loc));
     if (target != null) {
       comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(target));
@@ -269,8 +256,7 @@ public class RobotPlayer {
         .min(comp)
         .ifPresent(x -> {
           try {
-            boolean useSecondaryColor = x.getMark() == PaintType.ALLY_SECONDARY;
-            rc.attack(x.getMapLocation(), useSecondaryColor);
+            rc.attack(x.getMapLocation(), secondary(x.getMapLocation()));
           } catch (GameActionException e) {
             throw new RuntimeException(e);
           }
@@ -400,9 +386,71 @@ public class RobotPlayer {
     });
   }
 
+  static void checkRuins() throws GameActionException {
+    if (rc.getNumberTowers() == GameConstants.MAX_NUMBER_OF_TOWERS) {
+      ruinTarget = null;
+      return;
+    }
+
+    if (ruinTarget == null) {
+      a:
+      for (var ruin : rc.senseNearbyRuins(-1)) {
+        if (rc.senseRobotAtLocation(ruin) != null) continue;
+        for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
+          if (isEnemy(patternTile.getPaint())) {
+            continue a;
+          }
+        }
+        // Okay we pick this ruin
+        ruinTarget = ruin;
+        break;
+      }
+    }
+
+    // Lower left corner
+    var corner = ruinTarget == null ? null : ruinTarget.translate(-2, -2);
+    if (ruinTarget != null && rc.canSenseLocation(corner)) {
+      // primary = money, secondary = paint
+      var type = (rng() % 3) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      var okay = false;
+      if (!rc.senseMapInfo(corner).getMark().isAlly()) {
+        rc.setIndicatorDot(corner, 0, 255, 0);
+        if (rc.canMark(corner)) {
+          rc.mark(corner, type != UnitType.LEVEL_ONE_MONEY_TOWER);
+          okay = true;
+        } else {
+          //System.out.println("cant mark corner???");
+        }
+      } else {
+        type = rc.senseMapInfo(corner).getMark() == PaintType.ALLY_PRIMARY ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+        okay = true;
+      }
+      if (okay) {
+        var testSquare = corner.translate(1, 1);
+        if (!secondary(testSquare)) {
+          // Put in the pattern
+          var pattern = rc.getTowerPattern(type);
+          for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+              mapColors[corner.x + x][corner.y + y] = new MapColor(pattern[y][x]);
+            }
+          }
+        }
+        // Complete the ruin if we can.
+        if (rc.canCompleteTowerPattern(type, ruinTarget)) {
+          rc.completeTowerPattern(type, ruinTarget);
+          ruinTarget = null;
+          rc.setTimelineMarker("Tower built", 0, 255, 0);
+        }
+      }
+    }
+  }
+
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
     spawnCounter = rng() % SPAWN_LIST.length;
+    // This is in [x][y], but the patterns are in [y][x], as far as i can tell. not that it should matter since they're rotationally symmetrical i think
+    //mapColors = new MapColor[rc.getMapWidth()][rc.getMapHeight()];
 
     while (true) {
       try {
@@ -440,46 +488,12 @@ public class RobotPlayer {
             }
 
             // Try to build ruins
-            if (rc.isActionReady()) {
-              if (ruinTarget == null) {
-                a:
-                for (var ruin : rc.senseNearbyRuins(-1)) {
-                  if (rc.senseRobotAtLocation(ruin) != null) continue;
-                  for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-                    if (isEnemy(patternTile.getPaint())) {
-                      continue a;
-                    }
-                  }
-                  // Okay we pick this ruin
-                  ruinTarget = ruin;
-                  break;
-                }
-              }
-
-              if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) {
-                var dir = rc.getLocation().directionTo(ruinTarget);
-                // Mark the pattern we need to draw to build a tower here if we haven't already.
-                var shouldBeMarked = ruinTarget.subtract(dir);
-                var type = (rng() % 3) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
-                if (rc.senseMapInfo(shouldBeMarked).getMark() == PaintType.EMPTY && rc.canMarkTowerPattern(type, ruinTarget)) {
-                  rc.markTowerPattern(type, ruinTarget);
-                }
-                // Complete the ruin if we can.
-                if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruinTarget)) {
-                  rc.completeTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruinTarget);
-                  ruinTarget = null;
-                  rc.setTimelineMarker("Tower built", 0, 255, 0);
-                } else if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruinTarget)) {
-                  rc.completeTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruinTarget);
-                  ruinTarget = null;
-                  rc.setTimelineMarker("Tower built", 0, 255, 0);
-                }
-              }
-            }
+            checkRuins();
 
             // Try to paint a square in range
-            if (rc.getRoundNum() % 2 == 0) doPaint();
-            else doPaint_();
+//            if (rc.getRoundNum() % 2 == 0)
+            doPaint();
+//            else doPaint_();
 
             maybeReplenishPaint();
 
@@ -494,6 +508,10 @@ public class RobotPlayer {
             doAttack();
 
             // Target ruins the enemy is trying to build
+            var b = ruinTarget;
+            checkRuins();
+            ruinTarget = b;
+
             if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)
                 && rc.canSenseLocation(ruinTarget.add(rc.getLocation().directionTo(ruinTarget)).add(rc.getLocation().directionTo(ruinTarget)))) {
               ruinTarget = null;
