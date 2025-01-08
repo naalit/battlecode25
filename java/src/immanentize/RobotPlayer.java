@@ -120,6 +120,7 @@ public class RobotPlayer {
       navigate(target);
     } else {
       rc.setIndicatorString("failed to navigate");
+      exploreTarget = null;
     }
   }
 
@@ -141,6 +142,12 @@ public class RobotPlayer {
     }
   }
 
+  record MapColor(boolean secondary) {
+  }
+
+  static MapColor[][] mapColors;
+  static boolean[][] resourcePattern;
+
   static MapLocation closestPaintTower;
   static MapLocation closestTower;
   static MapLocation ruinTarget;
@@ -160,7 +167,7 @@ public class RobotPlayer {
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
       // Soldier: target unpainted tower squares
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getType() == UnitType.SOLDIER).flatMap(ruin -> {
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost && rc.getType() == UnitType.SOLDIER).flatMap(ruin -> {
         Optional<MapLocation> target = Optional.empty();
         try {
           a:
@@ -180,9 +187,9 @@ public class RobotPlayer {
         return target;
       })),
       // Soldier/mopper: target ruin *corner*
-      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(-2, -2)).filter(x -> !secondary(x.translate(1, 1)))),
+      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(-2, -2)).filter(x -> mapColors[x.x][x.y] == null)),
       // Soldier/mopper: target ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost || !x.isWithinDistanceSquared(rc.getLocation(), 8))),
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost && !x.isWithinDistanceSquared(rc.getLocation(), 8))),
       // Mopper: find enemy paint
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER)
@@ -205,12 +212,6 @@ public class RobotPlayer {
 
   static MapLocation target = null;
   static int targetIdx;
-
-  record MapColor(boolean secondary) {
-  }
-
-  static MapColor[][] mapColors;
-  static boolean[][] resourcePattern;
 
   static void doMove() throws GameActionException {
     if (!rc.isMovementReady()) return;
@@ -424,7 +425,17 @@ public class RobotPlayer {
     });
   }
 
+  static ArrayDeque<Integer> incomeFrames = new ArrayDeque<>();
+  static int lastMoney = 0;
+
   static void checkRuins() throws GameActionException {
+    var income = rc.getChips() - lastMoney;
+    lastMoney = rc.getChips();
+    if (incomeFrames.size() > 12) {
+      incomeFrames.removeFirst();
+    }
+    incomeFrames.addLast(income);
+
     // Also check resource patterns
     var rpCenter = new MapLocation(rc.getLocation().x - ((rc.getLocation().x - 2) % 5), rc.getLocation().y - ((rc.getLocation().y - 2) % 5));
     rc.setIndicatorDot(rpCenter, 0, 0, 255);
@@ -456,8 +467,13 @@ public class RobotPlayer {
     var corner = ruinTarget == null ? null : ruinTarget.translate(-2, -2);
     // TODO we don't need markers if we use hashes of ruin positions (though it means we can't dynamically decide which to build)
     if (ruinTarget != null && rc.canSenseLocation(corner)) {
-      // primary = money, secondary = paint
-      var type = (rng() % 3) == 1 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+//      // primary = money, secondary = paint
+//      var avgIncome = incomeFrames.stream().reduce((x, y) -> x + y).get() / incomeFrames.size();
+//      var numTowers = rc.getNumberTowers();
+//      // target 25 chips/tower?
+//      var percent = (double) avgIncome / ((double) numTowers * 20.0) * 100.0;
+      // just hardcoding 3/5 money towers for now
+      var type = (rng() % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
       var okay = false;
       if (!rc.senseMapInfo(corner).getMark().isAlly()) {
         rc.setIndicatorDot(corner, 0, 255, 0);
@@ -490,6 +506,8 @@ public class RobotPlayer {
       }
     }
   }
+
+  static int upgradeTurns = 0;
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
@@ -611,9 +629,14 @@ public class RobotPlayer {
             // Attack if possible
             doAttack();
 
-            // Self upgrade if possible
-            if (rc.getRoundNum() > 3 && rc.canUpgradeTower(rc.getLocation())) {
-              rc.upgradeTower(rc.getLocation());
+            // Self upgrade if possible (for money towers first)
+            if (rc.canUpgradeTower(rc.getLocation())) {
+              upgradeTurns += 1;
+              if (upgradeTurns > 2 || rc.getType().moneyPerTurn > 0) {
+                rc.upgradeTower(rc.getLocation());
+              }
+            } else {
+              upgradeTurns = 0;
             }
 
             // Try to spawn a unit
