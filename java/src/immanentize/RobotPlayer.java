@@ -182,7 +182,7 @@ public class RobotPlayer {
       // Soldier/mopper: target ruin *corner*
       new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(-2, -2)).filter(x -> !secondary(x.translate(1, 1)))),
       // Soldier/mopper: target ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getType() == UnitType.SOLDIER || !x.isWithinDistanceSquared(rc.getLocation(), 8))),
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost || !x.isWithinDistanceSquared(rc.getLocation(), 8))),
       // Mopper: find enemy paint
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER)
@@ -209,7 +209,8 @@ public class RobotPlayer {
   record MapColor(boolean secondary) {
   }
 
-  static MapColor[][] mapColors = new MapColor[60][60];
+  static MapColor[][] mapColors;
+  static boolean[][] resourcePattern;
 
   static void doMove() throws GameActionException {
     if (target == null || target.distanceSquaredTo(rc.getLocation()) < 2) {
@@ -246,12 +247,12 @@ public class RobotPlayer {
 
   static boolean secondary(MapLocation map) {
     var color = mapColors[map.x][map.y];
-    return color != null && color.secondary;
+    return color != null ? color.secondary : resourcePattern[map.y % 5][map.x % 5];
   }
 
   static boolean canPaint(MapInfo tile) throws GameActionException {
     return (tile.getPaint() == PaintType.EMPTY ||
-        (tile.getPaint().isAlly() && mapColors[tile.getMapLocation().x][tile.getMapLocation().y] != null && (tile.getPaint() == PaintType.ALLY_SECONDARY) != secondary(tile.getMapLocation())))
+        (tile.getPaint().isAlly() && (tile.getPaint() == PaintType.ALLY_SECONDARY) != secondary(tile.getMapLocation())))
         && tile.isPassable() && !tile.hasRuin();
   }
 
@@ -407,6 +408,13 @@ public class RobotPlayer {
   }
 
   static void checkRuins() throws GameActionException {
+    // Also check resource patterns
+    var rpCenter = new MapLocation(rc.getLocation().x - ((rc.getLocation().x - 2) % 5), rc.getLocation().y - ((rc.getLocation().y - 2) % 5));
+    rc.setIndicatorDot(rpCenter, 0, 0, 255);
+    if (rc.canCompleteResourcePattern(rpCenter)) {
+      rc.completeResourcePattern(rpCenter);
+    }
+
     if (rc.getNumberTowers() == GameConstants.MAX_NUMBER_OF_TOWERS) {
       ruinTarget = null;
       return;
@@ -447,8 +455,7 @@ public class RobotPlayer {
         okay = true;
       }
       if (okay) {
-        var testSquare = corner.translate(1, 1);
-        if (!secondary(testSquare)) {
+        if (mapColors[corner.x][corner.y] == null) {
           // Put in the pattern
           var pattern = rc.getTowerPattern(type);
           for (int x = 0; x < 5; x++) {
@@ -471,7 +478,8 @@ public class RobotPlayer {
     RobotPlayer.rc = rc;
     spawnCounter = rng() % SPAWN_LIST.length;
     // This is in [x][y], but the patterns are in [y][x], as far as i can tell. not that it should matter since they're rotationally symmetrical i think
-    //mapColors = new MapColor[rc.getMapWidth()][rc.getMapHeight()];
+    mapColors = new MapColor[rc.getMapWidth()][rc.getMapHeight()];
+    resourcePattern = rc.getResourcePattern();
 
     while (true) {
       try {
@@ -585,6 +593,11 @@ public class RobotPlayer {
 
             // Attack if possible
             doAttack();
+
+            // Self upgrade if possible
+            if (rc.getRoundNum() > 3 && rc.canUpgradeTower(rc.getLocation())) {
+              rc.upgradeTower(rc.getLocation());
+            }
 
             // Try to spawn a unit
             var toSpawn = rc.getRoundNum() < 4 ? UnitType.SOLDIER : SPAWN_LIST[spawnCounter];
