@@ -2,10 +2,7 @@ package immanentize;
 
 import battlecode.common.*;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Supplier;
 
 @SuppressWarnings({"Convert2MethodRef", "CallToPrintStackTrace"})
@@ -26,17 +23,14 @@ public class RobotPlayer {
       Direction.NORTHWEST,
   };
 
-  static final UnitType[] INITIAL_SPAWN_LIST = {
-      UnitType.SOLDIER,
-      UnitType.SOLDIER,
-      UnitType.MOPPER,
-  };
-  static final UnitType[] SPAWN_LIST = {
+  static ArrayList<UnitType> SPAWN_LIST = new ArrayList<>(Arrays.asList(
       UnitType.MOPPER,
       UnitType.SOLDIER,
-      UnitType.MOPPER,
+      UnitType.SPLASHER,
       UnitType.SOLDIER,
-  };
+      UnitType.MOPPER,
+      UnitType.SPLASHER
+  ));
   static int spawnCounter;
 
   static final double FREE_PAINT_TARGET = 0.2;
@@ -158,12 +152,12 @@ public class RobotPlayer {
   static MapLocation exploreTarget = null;
   static TargetType[] targets = {
       // Paint resupply - URGENT
-      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() < 50 || (rc.getPaint() < 55 && rc.getType() == UnitType.SOLDIER))),
+      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() < 50 || (rc.getPaint() < 55 && rc.getType() == UnitType.SOLDIER) || (rc.getPaint() < 100 && rc.getType() == UnitType.SPLASHER))),
       // Mopper: find nearby soldier
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER && rc.getPaint() > 50)
           .flatMap(_x -> Arrays.stream(nearbyAllies)
-              .filter(x -> x.getType() == UnitType.SOLDIER && x.paintAmount < UnitType.SOLDIER.paintCapacity)
+              .filter(x -> x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
       // Soldier: target unpainted tower squares
@@ -189,16 +183,16 @@ public class RobotPlayer {
       // Soldier/mopper: target ruin *corner*
       new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(-2, -2)).filter(x -> mapColors[x.x][x.y] == null)),
       // Soldier/mopper: target ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost && !x.isWithinDistanceSquared(rc.getLocation(), 8))),
-      // Mopper: find enemy paint
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost && !x.isWithinDistanceSquared(rc.getLocation(), 2))),
+      // Mopper/splasher: find enemy paint
       new TargetType(() -> Optional.of(0)
-          .filter(_x -> rc.getType() == UnitType.MOPPER)
+          .filter(_x -> rc.getType() != UnitType.SOLDIER)
           .flatMap(_x -> Arrays.stream(rc.senseNearbyMapInfos())
               .filter(x -> isEnemy(x.getPaint()))
               .min(Comparator.comparingInt(x -> x.getMapLocation().distanceSquaredTo(rc.getLocation())))
               .map(x -> x.getMapLocation()))),
-      // Paint resupply
-      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() - 50 < (rc.getType().paintCapacity - 50) * FREE_PAINT_TARGET)),
+      // Paint resupply (not moppers (?))
+      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getType() != UnitType.MOPPER && rc.getPaint() - 50 < (rc.getType().paintCapacity - 50) * FREE_PAINT_TARGET)),
       // Exploration
       new TargetType(() ->
           Optional.ofNullable(exploreTarget)
@@ -238,7 +232,7 @@ public class RobotPlayer {
       microMove();
     } else {
       if (targetIdx < 10000) {
-        rc.setIndicatorString("target " + targetIdx);
+        //rc.setIndicatorString("target " + targetIdx);
         navigate(target);
       }
     }
@@ -289,13 +283,61 @@ public class RobotPlayer {
     rc.setIndicatorString("paint time (old): " + (end - start) + "bt");
   }
 
-  record AttackTarget(MapLocation target, double score) {
+  static final class AttackTarget {
+    public final MapLocation target;
+    public double score;
+
+    AttackTarget(MapLocation target, double score) {
+      this.target = target;
+      this.score = score;
+    }
+  }
+
+  static Optional<AttackTarget> pickSplasherAttackTarget(MapLocation loc) throws GameActionException {
+    if (!rc.isActionReady()) return Optional.empty();
+    if (rc.getPaint() < 100) return Optional.empty();
+
+    var locs = Arrays.stream(rc.senseNearbyMapInfos(loc, UnitType.SPLASHER.actionRadiusSquared))
+        .filter(l -> rc.canAttack(l.getMapLocation()))
+        .map(l -> new AttackTarget(l.getMapLocation(), 0))
+        .toArray(n -> new AttackTarget[n]);
+
+    var aoeRad2 = 4;
+    var centerAoeRad2 = 2;
+    var damage = rc.getType().aoeAttackStrength;
+    for (var unit : nearbyEnemies) {
+      if (unit.getType().isRobotType()) continue;
+      for (var l : locs) {
+        if (!unit.location.isWithinDistanceSquared(loc, aoeRad2)) continue;
+        l.score += Math.min(damage, unit.health);
+        if (damage >= unit.health) l.score += KILL_VALUE;
+      }
+    }
+    var start = Clock.getBytecodeNum();
+    var st = rc.getRoundNum();
+    // TODO adjust this constant
+    for (var tile : rc.senseNearbyMapInfos(loc, 9)) {
+      if (!tile.isPassable()) continue;
+      var p = tile.getPaint();
+      if (p.isAlly()) continue;
+      for (var l : locs) {
+        if (p == PaintType.EMPTY && tile.getMapLocation().isWithinDistanceSquared(l.target, aoeRad2)) {
+          l.score += 1;
+        } else if (p.isEnemy() && tile.getMapLocation().isWithinDistanceSquared(l.target, centerAoeRad2)) {
+          l.score += 2;
+        }
+      }
+    }
+    var end = Clock.getBytecodeNum();
+    rc.setIndicatorString("scan: " + start + "/" + st + " - " + end + "/" + rc.getRoundNum());
+    return Arrays.stream(locs).max(Comparator.comparingDouble(x -> x.score));
   }
 
   /// Single target only (for towers and soldiers) (also moppers now, just single target attacks not sweeps)
   static Optional<AttackTarget> pickAttackTarget(MapLocation loc) throws GameActionException {
     if (!rc.isActionReady()) return Optional.empty();
     if (rc.getType() == UnitType.SOLDIER && rc.getPaint() <= 50) return Optional.empty();
+    if (rc.getType() == UnitType.SPLASHER) return pickSplasherAttackTarget(loc);
 
     Optional<AttackTarget> best = Optional.empty();
 
@@ -324,7 +366,12 @@ public class RobotPlayer {
 
   static void doAttack() throws GameActionException {
     pickAttackTarget(rc.getLocation()).ifPresent(x -> {
+      if (x.score <= 0) return;
+      if (rc.getType() == UnitType.SPLASHER && x.score <= 2.0) return;
       try {
+//        if (rc.getType() == UnitType.SPLASHER) {
+//          rc.setIndicatorString("splasher score " + x.score);
+//        }
         if (!rc.canAttack(x.target)) System.out.println("could not attack" + x.target);
         else rc.attack(x.target);
 
@@ -511,10 +558,18 @@ public class RobotPlayer {
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
-    spawnCounter = rng() % SPAWN_LIST.length;
+    spawnCounter = rng() % SPAWN_LIST.size();
     // This is in [x][y], but the patterns are in [y][x], as far as i can tell. not that it should matter since they're rotationally symmetrical i think
     mapColors = new MapColor[rc.getMapWidth()][rc.getMapHeight()];
     resourcePattern = rc.getResourcePattern();
+    // More splashers on bigger maps
+    if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
+      SPAWN_LIST.add(UnitType.SPLASHER);
+    }
+    // More moppers on smaller maps
+    if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
+      SPAWN_LIST.add(UnitType.MOPPER);
+    }
 
     while (true) {
       try {
@@ -565,11 +620,40 @@ public class RobotPlayer {
             doMove();
           }
           case SPLASHER -> {
+            // Attack if possible
+            doAttack();
 
+            if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)) ruinTarget = null;
+            if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) {
+              for (MapInfo patternTile : rc.senseNearbyMapInfos(ruinTarget, 8)) {
+                if (patternTile.getPaint().isEnemy()) {
+                  ruinTarget = null;
+                }
+              }
+            }
+
+            // Try to build ruins
+            checkRuins();
+
+            maybeReplenishPaint();
+
+            // Move
+            doMove();
           }
           case MOPPER -> {
             // First attack enemies
             doAttack();
+
+            // Resupply nearby soldiers/splashers
+            if (rc.getPaint() >= 60 && rc.isActionReady()) {
+              for (var unit : rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam())) {
+                if (unit.getType().isRobotType() && unit.getType() != UnitType.MOPPER && unit.paintAmount < unit.getType().paintCapacity) {
+                  var transfer = Math.min(rc.getPaint() - 50, unit.getType().paintCapacity - unit.paintAmount);
+                  rc.transferPaint(unit.location, transfer);
+                  break;
+                }
+              }
+            }
 
             // Target ruins the enemy is trying to build
             var b = ruinTarget;
@@ -608,17 +692,6 @@ public class RobotPlayer {
             if (toMop != null)
               rc.attack(toMop);
 
-            // Resupply nearby soldiers
-            if (rc.getPaint() > 50 && rc.isActionReady()) {
-              for (var unit : rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam())) {
-                if (unit.getType() == UnitType.SOLDIER && unit.paintAmount < unit.getType().paintCapacity) {
-                  var transfer = Math.min(rc.getPaint() - 50, unit.getType().paintCapacity - unit.paintAmount);
-                  rc.transferPaint(unit.location, transfer);
-                  break;
-                }
-              }
-            }
-
             maybeReplenishPaint();
 
             doMove();
@@ -640,17 +713,17 @@ public class RobotPlayer {
             }
 
             // Try to spawn a unit
-            var toSpawn = rc.getRoundNum() < 4 ? UnitType.SOLDIER : SPAWN_LIST[spawnCounter];
+            var toSpawn = rc.getRoundNum() < 4 ? UnitType.SOLDIER : SPAWN_LIST.get(spawnCounter);
             for (var dir : MOVE_DIRECTIONS) {
               if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
                 rc.buildRobot(toSpawn, rc.getLocation().add(dir));
-                spawnCounter = (spawnCounter + 1) % SPAWN_LIST.length;
+                spawnCounter = (spawnCounter + 1) % SPAWN_LIST.size();
               }
             }
 
           }
         }
-      } catch (GameActionException e) {
+      } catch (Exception e) {
         e.printStackTrace();
         rc.setIndicatorString("exception");
       }
