@@ -150,11 +150,7 @@ public class RobotPlayer {
     }
   }
 
-  record MapColor(boolean secondary) {
-  }
-
-  static MapColor[][] mapColors;
-  static boolean[][] resourcePattern;
+  static Map map;
 
   static MapLocation closestPaintTower;
   static MapLocation closestTower;
@@ -185,7 +181,7 @@ public class RobotPlayer {
             for (int y = -2; y < 3; y++) {
               var loc = ruin.translate(x, y);
               if ((x == 0 && y == 0) || !rc.canSenseLocation(loc)) continue;
-              if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != secondary(loc)) {
+              if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != map.tile(loc).secondary()) {
                 target = Optional.of(loc);
                 break a;
               }
@@ -197,7 +193,7 @@ public class RobotPlayer {
         return target;
       })),
       // Soldier: target mark location
-      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && mapColors[x.x][x.y] == null)),
+      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.hasOverlay(x))),
       // Soldier: target nearly-full resource pattern
       new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost || closestResourceSquaresLeft == 0) && closestResourceSquaresLeft < 12)),
       // Soldier: target ruins
@@ -260,17 +256,9 @@ public class RobotPlayer {
     }
   }
 
-  static boolean secondary(MapLocation map) {
-    var color = mapColors[map.x][map.y];
-    if (rc.getNumberTowers() >= GameConstants.MAX_NUMBER_OF_TOWERS) {
-      color = null;
-    }
-    return color != null ? color.secondary : resourcePattern[map.y % 4][map.x % 4];
-  }
-
   static boolean canPaint(MapInfo tile) throws GameActionException {
     return (tile.getPaint() == PaintType.EMPTY ||
-        (tile.getPaint().isAlly() && (tile.getPaint() == PaintType.ALLY_SECONDARY) != secondary(tile.getMapLocation())))
+        (tile.getPaint().isAlly() && (tile.getPaint() == PaintType.ALLY_SECONDARY) != map.tile(tile.getMapLocation()).secondary()))
         && tile.isPassable() && !tile.hasRuin();
   }
 
@@ -278,7 +266,7 @@ public class RobotPlayer {
     if (rc.getPaint() < minPaint() + rc.getType().attackCost || !rc.isActionReady()) return;
     // smaller is better
     var loc = rc.getLocation();
-    Comparator<MapInfo> comp = Comparator.comparingInt(x -> (mapColors[x.getMapLocation().x][x.getMapLocation().y] != null) ? 0 : 1);
+    Comparator<MapInfo> comp = Comparator.comparingInt(x -> map.hasOverlay(x.getMapLocation()) ? 0 : 1);
     comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(loc));
     if (target != null) {
       comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(target));
@@ -294,7 +282,7 @@ public class RobotPlayer {
         .min(comp)
         .ifPresent(x -> {
           try {
-            rc.attack(x.getMapLocation(), secondary(x.getMapLocation()));
+            rc.attack(x.getMapLocation(), map.tile(x.getMapLocation()).secondary());
           } catch (GameActionException e) {
             throw new RuntimeException(e);
           }
@@ -502,7 +490,6 @@ public class RobotPlayer {
   }
 
   static MapLocation sentRuin = null;
-  static int[][] lastRPCheckTurn = new int[15][15];
 
   static void checkRuins() throws GameActionException {
     var income = rc.getChips() - lastMoney;
@@ -512,36 +499,29 @@ public class RobotPlayer {
     }
     incomeFrames.addLast(income);
 
-//    if (rc.getRoundNum() > 500) rc.disintegrate();
-
     // Also check resource patterns
-    var rpCenter = new MapLocation(2 + 4 * (rc.getLocation().x / 4), 2 + 4 * (rc.getLocation().y / 4));
+    var rpCenter = map.findRPCenter(rc.getLocation());
     if (rc.canSenseLocation(rpCenter)) {
+      rc.setIndicatorDot(rpCenter, 0, 0, 255);
       if (rpCenter.equals(closestResource)) {
         closestResource = null;
       }
-      rc.setIndicatorDot(rpCenter, 0, 0, 255);
       if (rc.canCompleteResourcePattern(rpCenter)) {
         rc.completeResourcePattern(rpCenter);
-        lastRPCheckTurn[rc.getLocation().x / 4][rc.getLocation().y / 4] = rc.getRoundNum();
+        map.tile(rpCenter).lastCheckedRP = rc.getRoundNum();
 //        if (rc.canMark(rpCenter)) {
 //          rc.mark(rpCenter, true);
 //        }
-      } else if (rc.getType() == UnitType.SOLDIER && lastRPCheckTurn[rc.getLocation().x / 4][rc.getLocation().y / 4] < Math.max(rc.getRoundNum() - 25, 1)) {
+      } else if (rc.getType() == UnitType.SOLDIER && map.tile(rpCenter).lastCheckedRP < Math.max(rc.getRoundNum() - 25, 1)) {
         // we can complete this pattern! let's see if it's possible
         var pLeft = 25;
         for (var tile : rc.senseNearbyMapInfos(rpCenter, 8)) {
-//          var t = mapColors[tile.getMapLocation().x][tile.getMapLocation().y];
-//          if (t != null) {
-//            rc.setIndicatorDot(tile.getMapLocation(), 255, 0, t.secondary ? 255 : 0);
-//          }
           // this should be exactly the correct tiles (bc 0,3 has r^2 9)
-          if (!tile.isPassable() || tile.getPaint().isEnemy() || secondary(tile.getMapLocation()) != resourcePattern[tile.getMapLocation().y % 4][tile.getMapLocation().x % 4]) {
-//            rc.setIndicatorString("pleft: " +!tile.isPassable() +" "+ tile.getPaint().isEnemy() +" "+ (mapColors[tile.getMapLocation().x][tile.getMapLocation().y] != null));
+          if (!tile.isPassable() || tile.getPaint().isEnemy() || !map.tile(tile.getMapLocation()).rpCompatible()) {
             pLeft = -1;
             break;
           }
-          if (tile.getPaint().isAlly() && tile.getPaint().isSecondary() == secondary(tile.getMapLocation())) {
+          if (tile.getPaint().isAlly() && tile.getPaint().isSecondary() == map.tile(tile.getMapLocation()).secondary()) {
             pLeft -= 1;
           }
         }
@@ -557,7 +537,7 @@ public class RobotPlayer {
           if (rpCenter.equals(closestResource)) {
             closestResource = null;
           }
-          lastRPCheckTurn[rc.getLocation().x / 4][rc.getLocation().y / 4] = rc.getRoundNum();
+          map.tile(rpCenter).lastCheckedRP = rc.getRoundNum();
         }
       }
       if (closestResource != null) {
@@ -639,12 +619,12 @@ public class RobotPlayer {
         okay = true;
       }
       if (okay) {
-        if (mapColors[markLoc.x][markLoc.y] == null) {
+        if (!map.hasOverlay(markLoc)) {
           // Put in the pattern
           var pattern = rc.getTowerPattern(type);
           for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
-              mapColors[cRuinTarget.x - 2 + x][cRuinTarget.y - 2 + y] = new MapColor(pattern[y][x]);
+              map.tile(cRuinTarget.translate(-2 + x, -2 + y)).secondary = Optional.of(pattern[y][x]);
             }
           }
         }
@@ -678,8 +658,7 @@ public class RobotPlayer {
     RobotPlayer.rc = rc;
     spawnCounter = rng() % SPAWN_LIST.size();
     // This is in [x][y], but the patterns are in [y][x], as far as i can tell. not that it should matter since they're rotationally symmetrical i think
-    mapColors = new MapColor[rc.getMapWidth()][rc.getMapHeight()];
-    resourcePattern = rc.getResourcePattern();
+    map = new Map();
     final MapLocation[] exploreLocs = {
         new MapLocation(0, 0),
         new MapLocation(rc.getMapWidth() - 1, 0),
@@ -707,11 +686,11 @@ public class RobotPlayer {
               if (closestTower == null || i.location.distanceSquaredTo(rc.getLocation()) < closestTower.distanceSquaredTo(rc.getLocation())) {
                 closestTower = i.location;
               }
-              if (mapColors[i.location.x - 1][i.location.y - 1] != null) {
+              if (map.hasOverlay(i.location.translate(-1, -1))) {
                 // remove pattern
                 for (var x = -2; x <= 2; x++) {
                   for (var y = -2; y <= 2; y++) {
-                    mapColors[i.location.x + x][i.location.y + y] = null;
+                    map.tile(i.location.translate(x, y)).secondary = Optional.empty();
                   }
                 }
               }
