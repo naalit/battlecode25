@@ -249,6 +249,9 @@ public class RobotPlayer {
 
   static boolean secondary(MapLocation map) {
     var color = mapColors[map.x][map.y];
+    if (rc.getNumberTowers() >= GameConstants.MAX_NUMBER_OF_TOWERS) {
+      color = null;
+    }
     return color != null ? color.secondary : resourcePattern[map.y % 4][map.x % 4];
   }
 
@@ -552,8 +555,13 @@ public class RobotPlayer {
     }
 
     for (var m : rc.readMessages(-1)) {
-      ruinTarget = decode(m.getBytes());
-      rc.setIndicatorDot(ruinTarget, 255, 0, 0);
+      var loc = decode(m.getBytes());
+      if ((m.getBytes() & 1 << 13) != 0) {
+        exploreTarget = loc;
+      } else {
+        ruinTarget = loc;
+        rc.setIndicatorDot(ruinTarget, 255, 0, 0);
+      }
     }
 
     if (rc.getNumberTowers() == GameConstants.MAX_NUMBER_OF_TOWERS) {
@@ -641,6 +649,7 @@ public class RobotPlayer {
 
   static int upgradeTurns = 0;
   static UnitType toSpawn = null;
+  static Integer[] ids = {0, 0, 0, 0};
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
@@ -648,13 +657,15 @@ public class RobotPlayer {
     // This is in [x][y], but the patterns are in [y][x], as far as i can tell. not that it should matter since they're rotationally symmetrical i think
     mapColors = new MapColor[rc.getMapWidth()][rc.getMapHeight()];
     resourcePattern = rc.getResourcePattern();
-    // More splashers on bigger maps
-    if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
-      SPAWN_LIST.add(UnitType.SPLASHER);
-    }
-    // More moppers on smaller maps
-    if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
-      SPAWN_LIST.add(UnitType.MOPPER);
+    final MapLocation[] exploreLocs = {
+        new MapLocation(0, 0),
+        new MapLocation(rc.getMapWidth() - 1, 0),
+        new MapLocation(0, rc.getMapHeight() - 1),
+        new MapLocation(rc.getMapWidth() - 1, rc.getMapHeight() - 1),
+    };
+    var exploreIdx = 7;
+    if (rc.getRoundNum() < 3) {
+      exploreIdx = rc.getType().paintPerTurn > 0 ? 0 : 2;
     }
 
     while (true) {
@@ -694,15 +705,13 @@ public class RobotPlayer {
             // Try to build ruins
             checkRuins();
 
-            // Try to paint a square in range
-//            if (rc.getRoundNum() % 2 == 0)
-            doPaint();
-//            else doPaint_();
-
             maybeReplenishPaint();
 
             // Move
             doMove();
+
+            // Try to paint a square in range
+            doPaint();
           }
           case SPLASHER -> {
             // Attack if possible
@@ -814,12 +823,21 @@ public class RobotPlayer {
                   : UnitType.SOLDIER;
               rc.setIndicatorString("chance: " + splasherChance + " / " + mopperChance + " --> " + toSpawn + " (sample " + (rng() % 100) + ")");
             }
+            Direction bdir = null;
+            var selfPaint = false;
+            // Spawn on our paint if possible
             for (var dir : MOVE_DIRECTIONS) {
               if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
-                rc.buildRobot(toSpawn, rc.getLocation().add(dir));
-                toSpawn = null;
-                break;
+                if (bdir == null || !selfPaint) {
+                  var paint = rc.senseMapInfo(rc.getLocation().add(dir)).getPaint().isAlly();
+                  bdir = dir;
+                  selfPaint = paint;
+                }
               }
+            }
+            if (bdir != null) {
+              rc.buildRobot(toSpawn, rc.getLocation().add(bdir));
+              toSpawn = null;
             }
 
             // TODO better comms system
@@ -838,6 +856,16 @@ public class RobotPlayer {
                   if (++nSent >= GameConstants.MAX_MESSAGES_SENT_TOWER) {
                     break;
                   }
+                }
+              }
+            } else if (exploreIdx < exploreLocs.length) {
+              for (var i : nearbyAllies) {
+                if (Arrays.stream(ids).anyMatch(n -> n == i.getID())) continue;
+                if (rc.canSendMessage(i.location)) {
+                  rc.setIndicatorLine(rc.getLocation(), i.location, 255, 0, 0);
+                  rc.sendMessage(i.location, 1 << 13 | encode(exploreLocs[exploreIdx]));
+                  ids[exploreIdx] = i.getID();
+                  exploreIdx++;
                 }
               }
             }
