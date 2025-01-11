@@ -50,7 +50,7 @@ public class Map {
     var vy = Math.max(loc.y - 1, 0);
     var cx = (vx - vy / 3) / 3;
     var cy = (vy + cx) / 3;
-    RobotPlayer.rc.setIndicatorString("c " + cx + ", " + cy);
+    //RobotPlayer.rc.setIndicatorString("c " + cx + ", " + cy);
     MapLocation best = null;
     var bestDist = 0;
     // not exact closest, so look one cell in each direction for the closest center

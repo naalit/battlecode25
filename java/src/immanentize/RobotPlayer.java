@@ -94,7 +94,7 @@ public class RobotPlayer {
         }
         var dist = loc.distanceSquaredTo(target);
         // TODO do we want this?
-        if (dist > pDist) {
+        if (dist > pDist + 5) {
           continue;
         }
         var paint = rc.senseMapInfo(loc).getPaint();
@@ -161,6 +161,10 @@ public class RobotPlayer {
   record TargetType(Supplier<Optional<MapLocation>> fun) {
   }
 
+  static boolean doTowers() {
+    return rc.getChips() >= UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.8;
+  }
+
   static MapLocation exploreTarget = null;
   static TargetType[] targets = {
       // Paint resupply - URGENT
@@ -172,8 +176,10 @@ public class RobotPlayer {
               .filter(x -> x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
+      // Soldier: target mark location
+      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.hasOverlay(x))),
       // Soldier: target unpainted tower squares
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.8 && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
+      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
         Optional<MapLocation> target = Optional.empty();
         try {
           a:
@@ -192,12 +198,13 @@ public class RobotPlayer {
         }
         return target;
       })),
-      // Soldier: target mark location
-      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.hasOverlay(x))),
       // Soldier: target nearly-full resource pattern
       new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost || closestResourceSquaresLeft == 0) && closestResourceSquaresLeft < 12)),
       // Soldier: target ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getChips() > UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.8 && !x.isWithinDistanceSquared(rc.getLocation(), 2))),
+      new TargetType(() -> Optional.ofNullable(ruinTarget)
+          .filter(x -> rc.getType() == UnitType.SOLDIER
+              && rc.getPaint() >= minPaint() + rc.getType().attackCost
+              && doTowers())),
       // Mopper/splasher: find enemy paint
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER)// || (rc.getType() == UnitType.SPLASHER && rc.getPaint() >= 100))
@@ -224,14 +231,8 @@ public class RobotPlayer {
   static void doMove() throws GameActionException {
     if (!rc.isMovementReady()) return;
 
-    if (target == null || target.distanceSquaredTo(rc.getLocation()) < 2) {
-      targetIdx = 10000;
-      target = null;
-    }
-    if (targetIdx < targets.length && targets[targetIdx].fun.get().isEmpty()) {
-      targetIdx = 10000;
-      target = null;
-    }
+    targetIdx = 10000;
+    target = null;
     for (int i = 0; i < targets.length && i <= targetIdx; i++) {
       // messy... :(
       // obv what we want is: `for (t, i) in targets.iter().enumerate()`
@@ -246,10 +247,11 @@ public class RobotPlayer {
       microMove();
     } else {
       if (targetIdx < 10000) {
-        //rc.setIndicatorString("target " + targetIdx);
+        rc.setIndicatorString("target " + targetIdx);
         navigate(target);
       }
     }
+    nearbyEnemies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam().opponent());
 
     if (targetIdx < 10000) {
       rc.setIndicatorLine(rc.getLocation(), target, 0, 255, 0);
@@ -266,7 +268,8 @@ public class RobotPlayer {
     if (rc.getPaint() < minPaint() + rc.getType().attackCost || !rc.isActionReady()) return;
     // smaller is better
     var loc = rc.getLocation();
-    Comparator<MapInfo> comp = Comparator.comparingInt(x -> map.hasOverlay(x.getMapLocation()) ? 0 : 1);
+    Comparator<MapInfo> comp = Comparator.comparingInt(x -> ruinTarget != null && ruinTarget.isWithinDistanceSquared(x.getMapLocation(), 4) ? 0 : 1);
+    comp = comp.thenComparingInt(x -> map.hasOverlay(x.getMapLocation()) ? 0 : 1);
     comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(loc));
     if (target != null) {
       comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(target));
@@ -375,6 +378,11 @@ public class RobotPlayer {
       if (x.score <= 0) return;
       if (rc.getType() == UnitType.SPLASHER && x.score <= 4.0) return;
       try {
+        // Don't sit on an empty square attacking and losing paint! TODO real micro for this
+        if (rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY && rc.getType() == UnitType.SOLDIER) {
+          rc.attack(rc.getLocation());
+          return;
+        }
 //        if (rc.getType() == UnitType.SPLASHER) {
 //          rc.setIndicatorString("splasher score " + x.score);
 //        }
@@ -501,7 +509,8 @@ public class RobotPlayer {
 
     // Also check resource patterns
     var rpCenter = map.findRPCenter(rc.getLocation());
-    if (rc.canSenseLocation(rpCenter)) {
+    var onTheMap = rc.onTheMap(rpCenter.translate(-2, -2)) && rc.onTheMap(rpCenter.translate(2, 2));
+    if (onTheMap && rc.canSenseLocation(rpCenter)) {
       rc.setIndicatorDot(rpCenter, 0, 0, 255);
       if (rpCenter.equals(closestResource)) {
         closestResource = null;
@@ -542,7 +551,7 @@ public class RobotPlayer {
       }
       if (closestResource != null) {
         rc.setIndicatorDot(closestResource, 255, 255, 255);
-        rc.setIndicatorString("left: " + closestResourceSquaresLeft);
+        //rc.setIndicatorString("left: " + closestResourceSquaresLeft);
       }
     }
 
@@ -571,24 +580,25 @@ public class RobotPlayer {
     }
 
     var cRuinTarget = ruinTarget;
-    if (ruinTarget == null || !rc.canSenseLocation(ruinTarget)) {
-      a:
-      for (var ruin : rc.senseNearbyRuins(-1)) {
-        if (rc.senseRobotAtLocation(ruin) != null) continue;
-        for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-          if (isEnemy(patternTile.getPaint())) {
-            continue a;
-          }
+//    if (ruinTarget == null || !rc.canSenseLocation(ruinTarget)) {
+    a:
+    for (var ruin : rc.senseNearbyRuins(-1)) {
+      if (rc.senseRobotAtLocation(ruin) != null) continue;
+      for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
+        if (isEnemy(patternTile.getPaint())) {
+          continue a;
         }
-        // Okay we pick this ruin
+      }
+      // Okay we pick this ruin
+      if (cRuinTarget == null || ruin.isWithinDistanceSquared(rc.getLocation(), cRuinTarget.distanceSquaredTo(rc.getLocation()))) {
         cRuinTarget = ruin;
-        break;
       }
     }
+//    }
 
-    if (ruinTarget == null) {
-      ruinTarget = cRuinTarget;
-    }
+//    if (ruinTarget == null) {
+    ruinTarget = cRuinTarget;
+//    }
 
     // Lower left corner
     var markLoc = cRuinTarget == null ? null : cRuinTarget.translate(0, 1);
@@ -597,14 +607,16 @@ public class RobotPlayer {
 //      rc.setIndicatorDot(ruinTarget, 255, 255, 255);
 //    }
     if (cRuinTarget != null && rc.canSenseLocation(markLoc)) {
+      rc.setIndicatorDot(cRuinTarget, 0, 0, 0);
       // primary = money, secondary = paint
 //      var avgIncome = incomeFrames.stream().reduce((x, y) -> x + y).get() / incomeFrames.size();
 //      var numTowers = rc.getNumberTowers();
 //      // target 25 chips/tower?
-//      var percent = (double) avgIncome / ((double) numTowers * 45.0) * 100.0;
+//      var percent = (double) avgIncome / ((double) numTowers * 25.0) * 100.0;
       // just hardcoding 3/5 money towers for now
       var type = (rng() % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
-//      type = rc.getNumberTowers() % 2 == 0 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      // money tower first ?
+      //type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
       var okay = false;
       if (!rc.senseMapInfo(markLoc).getMark().isAlly()) {
         rc.setIndicatorDot(markLoc, 0, 255, 0);
@@ -618,6 +630,11 @@ public class RobotPlayer {
         type = rc.senseMapInfo(markLoc).getMark() == PaintType.ALLY_PRIMARY ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
         okay = true;
       }
+//      if (rc.getNumberTowers() <= 2 && type == UnitType.LEVEL_ONE_PAINT_TOWER) {
+//        rc.setIndicatorDot(cRuinTarget, 0, 0, 255);
+//        ruinTarget = null;
+//        return;
+//      }
       if (okay) {
         if (!map.hasOverlay(markLoc)) {
           // Put in the pattern
@@ -695,12 +712,15 @@ public class RobotPlayer {
                 }
               }
             }
-
           }
         }
+        if (closestPaintTower != null && rc.canSenseLocation(closestPaintTower) && !rc.canSenseRobotAtLocation(closestPaintTower)) closestPaintTower = null;
 
         switch (rc.getType()) {
           case SOLDIER -> {
+            // Move
+            doMove();
+
             // Attack if possible
             doAttack();
 
@@ -708,14 +728,14 @@ public class RobotPlayer {
             checkRuins();
 
             maybeReplenishPaint();
-
-            // Move
-            doMove();
 
             // Try to paint a square in range
             doPaint();
           }
           case SPLASHER -> {
+            // Move
+            doMove();
+
             // Attack if possible
             doAttack();
 
@@ -723,9 +743,6 @@ public class RobotPlayer {
             checkRuins();
 
             maybeReplenishPaint();
-
-            // Move
-            doMove();
           }
           case MOPPER -> {
             // First attack enemies
@@ -790,7 +807,7 @@ public class RobotPlayer {
             doAttack();
 
             // Self upgrade if possible (for money towers first)
-            if (rc.canUpgradeTower(rc.getLocation())) {
+            if (rc.getNumberTowers() > 2 && rc.canUpgradeTower(rc.getLocation())) {
               upgradeTurns += 1;
               if (upgradeTurns > 2 || rc.getType().moneyPerTurn > 0) {
                 rc.upgradeTower(rc.getLocation());
@@ -803,43 +820,45 @@ public class RobotPlayer {
             if (rc.getRoundNum() < 4) {
               toSpawn = UnitType.SOLDIER;
             }
-            if (toSpawn == null) {
-              var splasherChance = 1.0 / 3.0;
-              // after splashers have been ruled out
-              var mopperChance = 1.0 / 2.0;
-              // More splashers on bigger maps
-              if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
-                splasherChance = 2.0 / 5.0;
-                mopperChance = 1.0 / 3.0;
+            if (rc.getNumberTowers() > 2 || ruinTarget == null) {
+              if (toSpawn == null) {
+                var splasherChance = 1.0 / 3.0;
+                // after splashers have been ruled out
+                var mopperChance = 1.0 / 2.0;
+                // More splashers on bigger maps
+                if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
+                  splasherChance = 2.0 / 5.0;
+                  mopperChance = 1.0 / 3.0;
+                }
+                // More moppers on smaller maps
+                if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
+                  splasherChance = 1.0 / 5.0;
+                  mopperChance = 2.0 / 5.0;
+                }
+                if (rc.getNumberTowers() < 3) {
+                  splasherChance = 0;
+                }
+                toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
+                    : rng() % 100 < mopperChance * 100.0 ? UnitType.MOPPER
+                    : UnitType.SOLDIER;
+                rc.setIndicatorString("chance: " + splasherChance + " / " + mopperChance + " --> " + toSpawn + " (sample " + (rng() % 100) + ")");
               }
-              // More moppers on smaller maps
-              if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
-                splasherChance = 1.0 / 5.0;
-                mopperChance = 2.0 / 5.0;
-              }
-              if (rc.getNumberTowers() < 3) {
-                splasherChance = 0;
-              }
-              toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
-                  : rng() % 100 < mopperChance * 100.0 ? UnitType.MOPPER
-                  : UnitType.SOLDIER;
-              rc.setIndicatorString("chance: " + splasherChance + " / " + mopperChance + " --> " + toSpawn + " (sample " + (rng() % 100) + ")");
-            }
-            Direction bdir = null;
-            var selfPaint = false;
-            // Spawn on our paint if possible
-            for (var dir : MOVE_DIRECTIONS) {
-              if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
-                if (bdir == null || !selfPaint) {
-                  var paint = rc.senseMapInfo(rc.getLocation().add(dir)).getPaint().isAlly();
-                  bdir = dir;
-                  selfPaint = paint;
+              Direction bdir = null;
+              var selfPaint = false;
+              // Spawn on our paint if possible
+              for (var dir : MOVE_DIRECTIONS) {
+                if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
+                  if (bdir == null || !selfPaint) {
+                    var paint = rc.senseMapInfo(rc.getLocation().add(dir)).getPaint().isAlly();
+                    bdir = dir;
+                    selfPaint = paint;
+                  }
                 }
               }
-            }
-            if (bdir != null) {
-              rc.buildRobot(toSpawn, rc.getLocation().add(bdir));
-              toSpawn = null;
+              if (bdir != null) {
+                rc.buildRobot(toSpawn, rc.getLocation().add(bdir));
+                toSpawn = null;
+              }
             }
 
             // TODO better comms system
