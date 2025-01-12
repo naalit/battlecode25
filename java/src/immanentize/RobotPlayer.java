@@ -497,6 +497,13 @@ public class RobotPlayer {
     return new MapLocation((msg >> 6) & 0b11_1111, msg & 0b11_1111);
   }
 
+  static int hash(MapLocation loc) {
+    var v = (loc.x << 12 | loc.y) ^ 0b110101110110101110;
+    v ^= v >> 9;
+    v ^= v << 13;
+    return v;
+  }
+
   static MapLocation sentRuin = null;
 
   static void checkRuins() throws GameActionException {
@@ -555,15 +562,15 @@ public class RobotPlayer {
       }
     }
 
-    for (var m : rc.readMessages(-1)) {
-      var loc = decode(m.getBytes());
-      if ((m.getBytes() & 1 << 13) != 0) {
-        exploreTarget = loc;
-      } else {
-        ruinTarget = loc;
-        rc.setIndicatorDot(ruinTarget, 255, 0, 0);
-      }
-    }
+//    for (var m : rc.readMessages(-1)) {
+//      var loc = decode(m.getBytes());
+//      if ((m.getBytes() & 1 << 13) != 0) {
+//        exploreTarget = loc;
+//      } else {
+//        ruinTarget = loc;
+//        rc.setIndicatorDot(ruinTarget, 255, 0, 0);
+//      }
+//    }
 
     if (rc.getNumberTowers() == GameConstants.MAX_NUMBER_OF_TOWERS) {
       ruinTarget = null;
@@ -600,13 +607,7 @@ public class RobotPlayer {
     ruinTarget = cRuinTarget;
 //    }
 
-    // Lower left corner
-    var markLoc = cRuinTarget == null ? null : cRuinTarget.translate(0, 1);
-    // TODO we don't need markers if we use hashes of ruin positions (though it means we can't dynamically decide which to build)
-//    if (ruinTarget != null) {
-//      rc.setIndicatorDot(ruinTarget, 255, 255, 255);
-//    }
-    if (cRuinTarget != null && rc.canSenseLocation(markLoc)) {
+    if (cRuinTarget != null && rc.canSenseLocation(cRuinTarget)) {
       rc.setIndicatorDot(cRuinTarget, 0, 0, 0);
       // primary = money, secondary = paint
 //      var avgIncome = incomeFrames.stream().reduce((x, y) -> x + y).get() / incomeFrames.size();
@@ -614,45 +615,28 @@ public class RobotPlayer {
 //      // target 25 chips/tower?
 //      var percent = (double) avgIncome / ((double) numTowers * 25.0) * 100.0;
       // just hardcoding 3/5 money towers for now
-      var type = (rng() % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      var type = (hash(cRuinTarget) % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
       //type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
-      var okay = false;
-      if (!rc.senseMapInfo(markLoc).getMark().isAlly()) {
-        rc.setIndicatorDot(markLoc, 0, 255, 0);
-        if (rc.canMark(markLoc)) {
-          rc.mark(markLoc, type != UnitType.LEVEL_ONE_MONEY_TOWER);
-          okay = true;
-        } else {
-          //System.out.println("cant mark corner???");
+      if (rc.getNumberTowers() > 2 && (hash(cRuinTarget) % 5) == 0) type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
+
+      if (!map.hasOverlay(cRuinTarget.translate(1, 1))) {
+        // Put in the pattern
+        var pattern = rc.getTowerPattern(type);
+        for (int x = 0; x < 5; x++) {
+          for (int y = 0; y < 5; y++) {
+            map.tile(cRuinTarget.translate(-2 + x, -2 + y)).secondary = Optional.of(pattern[y][x]);
+          }
         }
-      } else {
-        type = rc.senseMapInfo(markLoc).getMark() == PaintType.ALLY_PRIMARY ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
-        okay = true;
       }
-//      if (rc.getNumberTowers() <= 2 && type == UnitType.LEVEL_ONE_PAINT_TOWER) {
-//        rc.setIndicatorDot(cRuinTarget, 0, 0, 255);
-//        ruinTarget = null;
-//        return;
-//      }
-      if (okay) {
-        if (!map.hasOverlay(markLoc)) {
-          // Put in the pattern
-          var pattern = rc.getTowerPattern(type);
-          for (int x = 0; x < 5; x++) {
-            for (int y = 0; y < 5; y++) {
-              map.tile(cRuinTarget.translate(-2 + x, -2 + y)).secondary = Optional.of(pattern[y][x]);
-            }
-          }
+      // Complete the ruin if we can.
+      if (rc.canCompleteTowerPattern(type, cRuinTarget)) {
+        rc.completeTowerPattern(type, cRuinTarget);
+        if (cRuinTarget.equals(ruinTarget)) {
+          ruinTarget = null;
         }
-        // Complete the ruin if we can.
-        if (rc.canCompleteTowerPattern(type, cRuinTarget)) {
-          rc.completeTowerPattern(type, cRuinTarget);
-          if (cRuinTarget.equals(ruinTarget)) {
-            ruinTarget = null;
-          }
-          rc.setTimelineMarker("Tower built", 0, 255, 0);
-        }
+        rc.setTimelineMarker("Tower built", 0, 255, 0);
       }
     }
 
@@ -714,7 +698,8 @@ public class RobotPlayer {
             }
           }
         }
-        if (closestPaintTower != null && rc.canSenseLocation(closestPaintTower) && !rc.canSenseRobotAtLocation(closestPaintTower)) closestPaintTower = null;
+        if (closestPaintTower != null && rc.canSenseLocation(closestPaintTower) && !rc.canSenseRobotAtLocation(closestPaintTower))
+          closestPaintTower = null;
 
         switch (rc.getType()) {
           case SOLDIER -> {
