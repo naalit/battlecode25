@@ -618,7 +618,7 @@ public class RobotPlayer {
       var type = (hash(cRuinTarget) % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
       if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
-      //type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
+      type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
       if (rc.getNumberTowers() > 2 && (hash(cRuinTarget) % 5) == 0) type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
 
       if (!map.hasOverlay(cRuinTarget.translate(1, 1))) {
