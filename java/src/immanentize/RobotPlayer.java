@@ -71,6 +71,7 @@ public class RobotPlayer {
   }
 
   static Map map;
+  static Comms comms;
 
   static MapLocation closestResource;
   static int closestResourceSquaresLeft;
@@ -178,26 +179,6 @@ public class RobotPlayer {
         //rc.setIndicatorString("left: " + closestResourceSquaresLeft);
       }
     }
-
-//    for (var m : rc.readMessages(-1)) {
-//      var loc = decode(m.getBytes());
-//      if ((m.getBytes() & 1 << 13) != 0) {
-//        exploreTarget = loc;
-//      } else {
-//        ruinTarget = loc;
-//        rc.setIndicatorDot(ruinTarget, 255, 0, 0);
-//      }
-//    }
-
-    // TODO per-tower
-    if (map.ruinTarget != null && !map.ruinTarget.center.equals(sentRuin)) {
-      for (var i : nearbyAllies) {
-        if (i.getType().isTowerType() && rc.canSendMessage(i.location)) {
-          rc.sendMessage(i.location, encode(map.ruinTarget.center));
-          sentRuin = map.ruinTarget.center;
-        }
-      }
-    }
   }
 
   static int upgradeTurns = 0;
@@ -209,6 +190,7 @@ public class RobotPlayer {
     spawnCounter = rng() % SPAWN_LIST.size();
     // This is in [x][y], but the patterns are in [y][x], as far as i can tell. not that it should matter since they're rotationally symmetrical i think
     map = new Map();
+    comms = new Comms();
     final MapLocation[] exploreLocs = {
         new MapLocation(0, 0),
         new MapLocation(rc.getMapWidth() - 1, 0),
@@ -226,6 +208,7 @@ public class RobotPlayer {
         nearbyEnemies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam().opponent());
 
         map.update();
+        comms.update();
 
         switch (rc.getType()) {
           case SOLDIER -> {
@@ -341,34 +324,6 @@ public class RobotPlayer {
               if (bdir != null) {
                 rc.buildRobot(toSpawn, rc.getLocation().add(bdir));
                 toSpawn = null;
-              }
-            }
-
-            // TODO better comms system
-            for (var m : rc.readMessages(-1)) {
-              var l = decode(m.getBytes());
-              map.tryAddRuin(l);
-            }
-//            var nSent = 0;
-//            if (map.ruinTarget != null) {
-//              for (var i : nearbyAllies) {
-//                if (i.location.isWithinDistanceSquared(rc.getLocation(), GameConstants.MESSAGE_RADIUS_SQUARED) && rc.canSendMessage(i.location)) {
-//                  rc.sendMessage(i.location, encode(map.ruinTarget));
-//                  if (++nSent >= GameConstants.MAX_MESSAGES_SENT_TOWER) {
-//                    break;
-//                  }
-//                }
-//              }
-//            } else
-            if (exploreIdx < exploreLocs.length) {
-              for (var i : nearbyAllies) {
-                if (Arrays.stream(ids).anyMatch(n -> n == i.getID())) continue;
-                if (rc.canSendMessage(i.location)) {
-                  rc.setIndicatorLine(rc.getLocation(), i.location, 255, 0, 0);
-                  rc.sendMessage(i.location, 1 << 13 | encode(exploreLocs[exploreIdx]));
-                  ids[exploreIdx] = i.getID();
-                  exploreIdx++;
-                }
               }
             }
           }

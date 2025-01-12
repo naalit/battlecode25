@@ -1,21 +1,22 @@
 package immanentize;
 
-import battlecode.common.GameConstants;
-import battlecode.common.MapLocation;
+import battlecode.common.*;
 
-import java.util.ArrayList;
+import static immanentize.RobotPlayer.rc;
+import static immanentize.RobotPlayer.map;
 
 public class Comms {
   public static class Message {
     public enum Type {
       Ruin,
-      AllyTower,
-      EnemyTower,
+      Tower,
     }
 
     public Type type;
     public int round;
     public MapLocation loc;
+    public UnitType towerType;
+    public Team team;
 
     Message(Type type) {
       this.type = type;
@@ -27,16 +28,13 @@ public class Comms {
       this.round = round;
     }
 
-    Message(Type type, TLoc loc) {
-      this.type = type;
-      this.loc = loc.loc;
-      this.round = loc.round;
-    }
-
     Message(int encoded) {
       type = Type.values()[encoded >> 30];
       round = (encoded >> 12) & (2048 - 1);
       loc = new MapLocation((encoded >> 6) & 0b11_1111, encoded & 0b11_1111);
+      towerType = (encoded & (1 << 24)) > 0 ? UnitType.LEVEL_ONE_MONEY_TOWER
+          : (encoded & (1 << 25)) > 0 ? UnitType.LEVEL_ONE_PAINT_TOWER : UnitType.LEVEL_ONE_DEFENSE_TOWER;
+      team = (encoded & (1 << 26)) > 0 ? rc.getTeam() : rc.getTeam().opponent();
     }
 
     int encode() {
@@ -44,60 +42,55 @@ public class Comms {
       i |= type.ordinal() << 30;
       i |= round << 12;
       i |= loc.x << 6 | loc.y;
+      if (towerType == UnitType.LEVEL_ONE_MONEY_TOWER) i |= 1 << 24;
+      if (towerType == UnitType.LEVEL_ONE_PAINT_TOWER) i |= 1 << 25;
+      if (team == rc.getTeam()) i |= 1 << 26;
       return i;
     }
   }
 
-  public static final class TLoc {
-    public final MapLocation loc;
-    public int round;
-
-    public TLoc(MapLocation loc, int round) {
-      this.loc = loc;
-      this.round = round;
-    }
-  }
-
-  ArrayList<TLoc> allyTowers;
-  ArrayList<TLoc> enemyTowers;
-  ArrayList<TLoc> ruins;
   int midx, uidx;
 
-  void process() {
+  void update() throws GameActionException {
     var rc = RobotPlayer.rc;
     for (var data : rc.readMessages(rc.getRoundNum() - 1)) {
       var m = new Message(data.getBytes());
       switch (m.type) {
         case Ruin -> {
-          if (!ruins.contains(m.loc)) {
-            ruins.add(new TLoc(m.loc, m.round));
-          }
+          map.tryAddRuin(m.loc, m.round);
         }
-        case EnemyTower -> {
-          if (!enemyTowers.contains(m.loc)) {
-            enemyTowers.add(new TLoc(m.loc, m.round));
-          }
-        }
-        case AllyTower -> {
-          if (!allyTowers.contains(m.loc)) {
-            allyTowers.add(new TLoc(m.loc, m.round));
-          }
+        case Tower -> {
+          map.tryAddTower(m.loc, m.team, m.towerType, m.round);
         }
       }
     }
 
-    if (ruins.isEmpty()) return;
     var sent = 0;
-    var tower = rc.getType().isTowerType();
-    var max = tower ? GameConstants.MAX_MESSAGES_SENT_TOWER : GameConstants.MAX_MESSAGES_SENT_ROBOT;
+    var isTower = rc.getType().isTowerType();
+    var max = isTower ? GameConstants.MAX_MESSAGES_SENT_TOWER : GameConstants.MAX_MESSAGES_SENT_ROBOT;
     var ulength = RobotPlayer.nearbyAllies.length;
-    var mlength = ruins.size();
-    var startu = uidx % ulength;
-    var startm = midx % mlength;
-    while (sent < max) {
-      var unit = RobotPlayer.nearbyAllies[uidx++ % ulength];
-      if (unit.getType().isTowerType() != tower && rc.canSendMessage(unit.location)) {
-        var m = new Message(Message.Type.Ruin, ruins.get(midx++ % mlength));
+    var mlength = map.ruins.size() + map.towers.size();
+    if (ulength > 0 && mlength > 0) {
+      var ustart = uidx % ulength;
+      var mstart = midx % mlength;
+      while (sent < max) {
+        var unit = RobotPlayer.nearbyAllies[uidx++ % ulength];
+        if (unit.getType().isTowerType() != isTower && rc.canSendMessage(unit.location)) {
+          var i = midx++ % mlength;
+          Message m;
+          if (i < map.ruins.size()) {
+            var ruin = map.ruins.get(i);
+            m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
+          } else {
+            var tower = map.towers.get(i - map.ruins.size());
+            m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);
+            m.towerType = tower.type;
+            m.team = tower.team;
+          }
+          rc.sendMessage(unit.location, m.encode());
+          sent += 1;
+        }
+        if (uidx % ulength == ustart || midx % mlength == mstart) break;
       }
     }
   }

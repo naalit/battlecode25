@@ -16,6 +16,7 @@ public class Map {
     public MapLocation center;
     public int allyTiles;
     public int enemyTiles;
+    public int roundSeen;
 
     public Ruin(MapLocation loc) {
       center = loc;
@@ -60,6 +61,7 @@ public class Map {
     public MapLocation loc;
     public Team team;
     public UnitType type;
+    public int roundSeen;
 
     public Tower(MapLocation loc, Team team, UnitType type) {
       this.loc = loc;
@@ -152,7 +154,8 @@ public class Map {
     return tiles[loc.x][loc.y];
   }
 
-  public void tryAddRuin(MapLocation ruin) {
+  public Ruin tryAddRuin(MapLocation ruin, int roundSeen) {
+    if (tile(ruin).tower != null && tile(ruin).tower.roundSeen > roundSeen) return null;
     if (!tile(ruin).isInRuin()) {
       var r = new Ruin(ruin);
       ruins.add(r);
@@ -164,14 +167,41 @@ public class Map {
       if (tile(ruin).tower != null) towers.remove(tile(ruin).tower);
       tile(ruin).tower = null;
     }
+    var r = tile(ruin).ruin;
+    r.roundSeen = Math.max(r.roundSeen, roundSeen);
+    return r;
+  }
+
+  private void removeRuin(Ruin ruin) {
+    ruins.remove(ruin);
+    for (int x = -2; x < 3; x++) {
+      for (int y = -2; y < 3; y++) {
+        tile(ruin.center.translate(x, y)).ruin = null;
+      }
+    }
+  }
+
+  public Tower tryAddTower(MapLocation loc, Team team, UnitType type, int roundSeen) {
+    if (tile(loc).ruin != null && tile(loc).ruin.roundSeen > roundSeen) return null;
+    if (tile(loc).tower == null || tile(loc).tower.team != team || tile(loc).tower.type != type.getBaseType()) {
+      if (tile(loc).tower != null) towers.remove(tile(loc).tower);
+      var tower = new Tower(loc, team, type);
+      towers.add(tower);
+      tile(loc).tower = tower;
+      if (tile(loc).ruin != null) removeRuin(tile(loc).ruin);
+      tower.roundSeen = Math.max(tower.roundSeen, roundSeen);
+      return tower;
+    } else {
+      tile(loc).tower.roundSeen = Math.max(tile(loc).tower.roundSeen, roundSeen);
+      return tile(loc).tower;
+    }
   }
 
   public void update() throws GameActionException {
     for (var ruinLoc : rc.senseNearbyRuins(-1)) {
       if (rc.canSenseRobotAtLocation(ruinLoc)) continue;
-      tryAddRuin(ruinLoc);
-
-      var ruin = tile(ruinLoc).ruin;
+      var ruin = tryAddRuin(ruinLoc, rc.getRoundNum());
+      ruin.roundSeen = rc.getRoundNum();
       ruin.update();
       if (ruin.allyTiles == 24) {
         if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc)) {
@@ -183,20 +213,15 @@ public class Map {
 
     for (var r : rc.senseNearbyRobots()) {
       if (r.type.isTowerType()) {
-        if (tile(r.location).tower == null || tile(r.location).tower.team != r.team) {
-          if (tile(r.location).tower != null) towers.remove(tile(r.location).tower);
-          var tower = new Tower(r.location, r.team, r.type);
-          towers.add(tower);
-          tile(r.location).tower = tower;
-          if (tile(r.location).ruin != null) ruins.remove(tile(r.location).ruin);
-          tile(r.location).ruin = null;
-        }
+        var tower = tryAddTower(r.location, r.team, r.type, rc.getRoundNum());
+        tower.roundSeen = rc.getRoundNum();
       }
     }
 
     ruinTarget = null;
     if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
       for (var ruin : ruins) {
+        rc.setIndicatorDot(ruin.center, 255, 0, 255);
         if ((rc.getType() == UnitType.MOPPER || ruin.enemyTiles == 0) &&
             (ruinTarget == null
                 //|| ruin.allyTiles > ruinTarget.allyTiles
@@ -208,6 +233,7 @@ public class Map {
 
     closestPaintTower = null;
     for (var tower : towers) {
+      rc.setIndicatorDot(tower.loc, 255, 0, 0);
       if (tower.team == rc.getTeam() && tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) {
         if (closestPaintTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestPaintTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestPaintTower = tower;
