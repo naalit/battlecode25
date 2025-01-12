@@ -3,7 +3,6 @@ package immanentize;
 import battlecode.common.*;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 import static immanentize.Micro.minPaint;
 
@@ -73,9 +72,6 @@ public class RobotPlayer {
 
   static Map map;
 
-  static MapLocation closestPaintTower;
-  static MapLocation closestTower;
-  static MapLocation ruinTarget;
   static MapLocation closestResource;
   static int closestResourceSquaresLeft;
 
@@ -89,28 +85,22 @@ public class RobotPlayer {
     if (rc.getPaint() < minPaint() + rc.getType().attackCost || !rc.isActionReady()) return;
     // smaller is better
     var loc = rc.getLocation();
-    Comparator<MapInfo> comp = Comparator.comparingInt(x -> ruinTarget != null && ruinTarget.isWithinDistanceSquared(x.getMapLocation(), 4) ? 0 : 1);
-    comp = comp.thenComparingInt(x -> map.hasOverlay(x.getMapLocation()) ? 0 : 1);
-    comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(loc));
-//    if (target != null) {
-//      comp = comp.thenComparingInt(x -> x.getMapLocation().distanceSquaredTo(target));
-//    }
-    Arrays.stream(rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared))
-        .filter(x -> {
-          try {
-            return canPaint(x);
-          } catch (GameActionException e) {
-            throw new RuntimeException(e);
-          }
-        })
-        .min(comp)
-        .ifPresent(x -> {
-          try {
-            rc.attack(x.getMapLocation(), map.tile(x.getMapLocation()).secondary());
-          } catch (GameActionException e) {
-            throw new RuntimeException(e);
-          }
-        });
+    MapLocation best = null;
+    for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
+      if (!canPaint(tile)) continue;
+      if (best == null) {
+        best = tile.getMapLocation();
+      } else if (map.tile(tile.getMapLocation()).isInRuin() != map.tile(best).isInRuin()) {
+        if (map.tile(tile.getMapLocation()).isInRuin()) {
+          best = tile.getMapLocation();
+        }
+      } else if (tile.getMapLocation().distanceSquaredTo(loc) < best.distanceSquaredTo(loc)) {
+        best = tile.getMapLocation();
+      }
+    }
+    if (best != null) {
+      rc.attack(best, map.tile(best).secondary());
+    }
   }
 
   static ArrayDeque<Integer> incomeFrames = new ArrayDeque<>();
@@ -199,81 +189,12 @@ public class RobotPlayer {
 //      }
 //    }
 
-    if (rc.getNumberTowers() == GameConstants.MAX_NUMBER_OF_TOWERS) {
-      ruinTarget = null;
-      return;
-    }
-
-    if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)) ruinTarget = null;
-    if (ruinTarget != null && rc.canSenseLocation(ruinTarget)) {
-      for (MapInfo patternTile : rc.senseNearbyMapInfos(ruinTarget, 8)) {
-        if (patternTile.getPaint().isEnemy()) {
-          ruinTarget = null;
-        }
-      }
-    }
-
-    var cRuinTarget = ruinTarget;
-//    if (ruinTarget == null || !rc.canSenseLocation(ruinTarget)) {
-    a:
-    for (var ruin : rc.senseNearbyRuins(-1)) {
-      if (rc.senseRobotAtLocation(ruin) != null) continue;
-      for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-        if (patternTile.getPaint().isEnemy()) {
-          continue a;
-        }
-      }
-      // Okay we pick this ruin
-      if (cRuinTarget == null || ruin.isWithinDistanceSquared(rc.getLocation(), cRuinTarget.distanceSquaredTo(rc.getLocation()))) {
-        cRuinTarget = ruin;
-      }
-    }
-//    }
-
-//    if (ruinTarget == null) {
-    ruinTarget = cRuinTarget;
-//    }
-
-    if (cRuinTarget != null && rc.canSenseLocation(cRuinTarget)) {
-      rc.setIndicatorDot(cRuinTarget, 0, 0, 0);
-      // primary = money, secondary = paint
-//      var avgIncome = incomeFrames.stream().reduce((x, y) -> x + y).get() / incomeFrames.size();
-//      var numTowers = rc.getNumberTowers();
-//      // target 25 chips/tower?
-//      var percent = (double) avgIncome / ((double) numTowers * 25.0) * 100.0;
-      // just hardcoding 1/2 money towers for now (after the first money tower)
-      var type = (hash(cRuinTarget) % 2) == 0 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
-      if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
-      // money tower first ?
-      type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
-      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 2 && (hash(cRuinTarget) % 5) == 0)
-        type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
-
-      if (!map.hasOverlay(cRuinTarget.translate(1, 1))) {
-        // Put in the pattern
-        var pattern = rc.getTowerPattern(type);
-        for (int x = 0; x < 5; x++) {
-          for (int y = 0; y < 5; y++) {
-            map.tile(cRuinTarget.translate(-2 + x, -2 + y)).secondary = Optional.of(pattern[y][x]);
-          }
-        }
-      }
-      // Complete the ruin if we can.
-      if (rc.canCompleteTowerPattern(type, cRuinTarget)) {
-        rc.completeTowerPattern(type, cRuinTarget);
-        if (cRuinTarget.equals(ruinTarget)) {
-          ruinTarget = null;
-        }
-        rc.setTimelineMarker("Tower built", 0, 255, 0);
-      }
-    }
-
     // TODO per-tower
-    if (ruinTarget != null && !ruinTarget.equals(sentRuin)) {
+    if (map.ruinTarget != null && !map.ruinTarget.center.equals(sentRuin)) {
       for (var i : nearbyAllies) {
         if (i.getType().isTowerType() && rc.canSendMessage(i.location)) {
-          rc.sendMessage(i.location, encode(ruinTarget));
-          sentRuin = ruinTarget;
+          rc.sendMessage(i.location, encode(map.ruinTarget.center));
+          sentRuin = map.ruinTarget.center;
         }
       }
     }
@@ -304,30 +225,7 @@ public class RobotPlayer {
         nearbyAllies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam());
         nearbyEnemies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam().opponent());
 
-        if (!rc.getType().isTowerType()) {
-          for (var i : nearbyAllies) {
-            if (i.getType().isTowerType()) {
-              if (i.getType().paintPerTurn > 0) {
-                if (closestPaintTower == null || i.location.distanceSquaredTo(rc.getLocation()) < closestPaintTower.distanceSquaredTo(rc.getLocation())) {
-                  closestPaintTower = i.location;
-                }
-              }
-              if (closestTower == null || i.location.distanceSquaredTo(rc.getLocation()) < closestTower.distanceSquaredTo(rc.getLocation())) {
-                closestTower = i.location;
-              }
-              if (map.hasOverlay(i.location.translate(-1, -1))) {
-                // remove pattern
-                for (var x = -2; x <= 2; x++) {
-                  for (var y = -2; y <= 2; y++) {
-                    map.tile(i.location.translate(x, y)).secondary = Optional.empty();
-                  }
-                }
-              }
-            }
-          }
-        }
-        if (closestPaintTower != null && rc.canSenseLocation(closestPaintTower) && !rc.canSenseRobotAtLocation(closestPaintTower))
-          closestPaintTower = null;
+        map.update();
 
         switch (rc.getType()) {
           case SOLDIER -> {
@@ -364,24 +262,7 @@ public class RobotPlayer {
             }
 
             // Target ruins the enemy is trying to build
-            var b = ruinTarget;
             checkRuins();
-            ruinTarget = b;
-
-            if (ruinTarget != null && rc.canSenseRobotAtLocation(ruinTarget)
-                && rc.canSenseLocation(ruinTarget.add(rc.getLocation().directionTo(ruinTarget)).add(rc.getLocation().directionTo(ruinTarget)))) {
-              ruinTarget = null;
-            }
-            a:
-            for (var ruin : rc.senseNearbyRuins(-1)) {
-              if (rc.senseRobotAtLocation(ruin) != null) continue;
-              for (MapInfo patternTile : rc.senseNearbyMapInfos(ruin, 8)) {
-                if (patternTile.getPaint().isEnemy()) {
-                  ruinTarget = ruin;
-                  break a;
-                }
-              }
-            }
 
             // Remove enemy paint
             MapLocation toMop = null;
@@ -389,7 +270,7 @@ public class RobotPlayer {
             if (rc.isActionReady()) {
               for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
                 if (tile.getPaint().isEnemy() && rc.canAttack(tile.getMapLocation())) {
-                  var ruin = ruinTarget != null && ruinTarget.isWithinDistanceSquared(tile.getMapLocation(), 8);
+                  var ruin = map.ruinTarget != null && map.ruinTarget.center.isWithinDistanceSquared(tile.getMapLocation(), 8);
                   if (!isInRuin || ruin) {
                     toMop = tile.getMapLocation();
                     isInRuin = ruin;
@@ -422,7 +303,7 @@ public class RobotPlayer {
             if (rc.getRoundNum() < 4) {
               toSpawn = UnitType.SOLDIER;
             }
-            if ((rc.getNumberTowers() > 2 || ruinTarget == null) && (rc.getRoundNum() < 50 || rc.getChips() > 1300)) {
+            if ((rc.getNumberTowers() > 2 || map.ruinTarget == null) && (rc.getRoundNum() < 50 || rc.getChips() > 1300)) {
               if (toSpawn == null) {
                 var splasherChance = 1.0 / 3.0;
                 // after splashers have been ruled out
@@ -466,22 +347,20 @@ public class RobotPlayer {
             // TODO better comms system
             for (var m : rc.readMessages(-1)) {
               var l = decode(m.getBytes());
-              if (!l.equals(ruinTarget) && (ruinTarget == null || l.distanceSquaredTo(rc.getLocation()) < ruinTarget.distanceSquaredTo(rc.getLocation()))) {
-                ruinTarget = l;
-                rc.setIndicatorDot(ruinTarget, 255, 0, 0);
-              }
+              map.tryAddRuin(l);
             }
-            var nSent = 0;
-            if (ruinTarget != null) {
-              for (var i : nearbyAllies) {
-                if (i.location.isWithinDistanceSquared(rc.getLocation(), GameConstants.MESSAGE_RADIUS_SQUARED) && rc.canSendMessage(i.location)) {
-                  rc.sendMessage(i.location, encode(ruinTarget));
-                  if (++nSent >= GameConstants.MAX_MESSAGES_SENT_TOWER) {
-                    break;
-                  }
-                }
-              }
-            } else if (exploreIdx < exploreLocs.length) {
+//            var nSent = 0;
+//            if (map.ruinTarget != null) {
+//              for (var i : nearbyAllies) {
+//                if (i.location.isWithinDistanceSquared(rc.getLocation(), GameConstants.MESSAGE_RADIUS_SQUARED) && rc.canSendMessage(i.location)) {
+//                  rc.sendMessage(i.location, encode(map.ruinTarget));
+//                  if (++nSent >= GameConstants.MAX_MESSAGES_SENT_TOWER) {
+//                    break;
+//                  }
+//                }
+//              }
+//            } else
+            if (exploreIdx < exploreLocs.length) {
               for (var i : nearbyAllies) {
                 if (Arrays.stream(ids).anyMatch(n -> n == i.getID())) continue;
                 if (rc.canSendMessage(i.location)) {

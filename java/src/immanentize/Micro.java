@@ -37,7 +37,7 @@ public class Micro {
   static MapLocation exploreTarget = null;
   static TargetType[] targets = {
       // Paint resupply - URGENT
-      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() < minPaint() + rc.getType().attackCost)),
+      new TargetType(() -> Optional.ofNullable(map.closestPaintTower).map(x -> x.loc).filter(_x -> rc.getPaint() < minPaint() + rc.getType().attackCost)),
       // Mopper: find nearby soldier
       new TargetType(() -> Optional.of(0)
           .filter(_x -> rc.getType() == UnitType.MOPPER && rc.getPaint() >= minPaint() + 10)
@@ -46,15 +46,15 @@ public class Micro {
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
       // Soldier: target mark location
-      new TargetType(() -> Optional.ofNullable(ruinTarget).map(x -> x.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.hasOverlay(x))),
+      new TargetType(() -> Optional.ofNullable(map.ruinTarget).map(x -> x.center.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.tile(x).isInRuin())),
       // Soldier: target unpainted tower squares
-      new TargetType(() -> Optional.ofNullable(ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
+      new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
         Optional<MapLocation> target = Optional.empty();
         try {
           a:
           for (int x = -2; x < 3; x++) {
             for (int y = -2; y < 3; y++) {
-              var loc = ruin.translate(x, y);
+              var loc = ruin.center.translate(x, y);
               if ((x == 0 && y == 0) || !rc.canSenseLocation(loc)) continue;
               if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != map.tile(loc).secondary()) {
                 target = Optional.of(loc);
@@ -70,7 +70,8 @@ public class Micro {
       // Soldier: target nearly-full resource pattern
       new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost || closestResourceSquaresLeft == 0) && closestResourceSquaresLeft < 12)),
       // Soldier: target ruins
-      new TargetType(() -> Optional.ofNullable(ruinTarget)
+      new TargetType(() -> Optional.ofNullable(map.ruinTarget)
+          .map(x -> x.center)
           .filter(x -> rc.getType() == UnitType.SOLDIER
               && rc.getPaint() >= minPaint() + rc.getType().attackCost
               && doTowers())),
@@ -82,7 +83,7 @@ public class Micro {
               .min(Comparator.comparingInt(x -> x.getMapLocation().distanceSquaredTo(rc.getLocation())))
               .map(x -> x.getMapLocation()))),
       // Paint resupply - if nothing else important to do (for soldiers)
-      new TargetType(() -> Optional.ofNullable(closestPaintTower).filter(_x -> rc.getPaint() < 50 + rc.getType().attackCost)),
+      new TargetType(() -> Optional.ofNullable(map.closestPaintTower).map(x -> x.loc).filter(_x -> rc.getPaint() < 50 + rc.getType().attackCost)),
       // Exploration
       new TargetType(() ->
           Optional.ofNullable(exploreTarget)
@@ -154,8 +155,6 @@ public class Micro {
     //     x
     int[] aoeOffsetsX = {0, -1, 0, 1, -2, -1, 0, 1, 2, -1, 0, 1, 0};
     int[] aoeOffsetsY = {2, 1, 1, 1, 0, 0, 0, 0, 0, -1, -1, -1, -2};
-    var aoeRad2 = 4;
-    var centerAoeRad2 = 2;
     var damage = UnitType.SPLASHER.aoeAttackStrength;
     for (var unit : nearbyEnemies) {
       if (unit.getType().isRobotType()) continue;
