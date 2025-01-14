@@ -74,7 +74,7 @@ public class RobotPlayer {
   static Comms comms;
 
   static MapLocation closestResource;
-  static int closestResourceSquaresLeft;
+//  static int closestResourceSquaresLeft;
 
   static boolean canPaint(MapInfo tile) throws GameActionException {
     return (tile.getPaint() == PaintType.EMPTY ||
@@ -87,16 +87,35 @@ public class RobotPlayer {
     // smaller is better
     var loc = rc.getLocation();
     MapLocation best = null;
+    Map.Ruin bestRuin = null;
     for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
-      if (!canPaint(tile)) continue;
+      var p = tile.getPaint();
+      if (p.isEnemy() || !tile.isPassable() || tile.hasRuin() ||
+          (tile.getPaint().isAlly() && (tile.getPaint() == PaintType.ALLY_SECONDARY) == map.tile(tile.getMapLocation()).secondary())) {
+        continue;
+      }
       if (best == null) {
         best = tile.getMapLocation();
-      } else if (map.tile(tile.getMapLocation()).isInRuin() != map.tile(best).isInRuin()) {
-        if (map.tile(tile.getMapLocation()).isInRuin()) {
+        bestRuin = map.tile(tile.getMapLocation()).ruin;
+      } else {
+        var thisRuin = map.tile(tile.getMapLocation()).ruin;
+        if ((thisRuin == null) != (bestRuin == null)) {
+          if (thisRuin != null) {
+            best = tile.getMapLocation();
+            bestRuin = thisRuin;
+          }
+        } else if (thisRuin != bestRuin && thisRuin.allyTiles == 0 && bestRuin.allyTiles != 0) {
           best = tile.getMapLocation();
+          bestRuin = map.tile(tile.getMapLocation()).ruin;
+        } else if (thisRuin == bestRuin || thisRuin.allyTiles != 0) {
+          if (closestResource != null && tile.getMapLocation().isWithinDistanceSquared(closestResource, 8) && !best.isWithinDistanceSquared(closestResource, 8)) {
+            best = tile.getMapLocation();
+            bestRuin = map.tile(tile.getMapLocation()).ruin;
+          } else if (tile.getMapLocation().distanceSquaredTo(loc) < best.distanceSquaredTo(loc)) {
+            best = tile.getMapLocation();
+            bestRuin = map.tile(tile.getMapLocation()).ruin;
+          }
         }
-      } else if (tile.getMapLocation().distanceSquaredTo(loc) < best.distanceSquaredTo(loc)) {
-        best = tile.getMapLocation();
       }
     }
     if (best != null) {
@@ -133,51 +152,67 @@ public class RobotPlayer {
     incomeFrames.addLast(income);
 
     // Also check resource patterns
-    var rpCenter = map.findRPCenter(rc.getLocation());
-    var onTheMap = rc.onTheMap(rpCenter.translate(-2, -2)) && rc.onTheMap(rpCenter.translate(2, 2));
-    if (onTheMap && rc.canSenseLocation(rpCenter)) {
-      rc.setIndicatorDot(rpCenter, 0, 0, 255);
-      if (rpCenter.equals(closestResource)) {
-        closestResource = null;
-      }
-      if (rc.canCompleteResourcePattern(rpCenter)) {
-        rc.completeResourcePattern(rpCenter);
-        map.tile(rpCenter).lastCheckedRP = rc.getRoundNum();
+    closestResource = map.findRPCenter(rc.getLocation());
+    if (closestResource != null && rc.canSenseLocation(closestResource)) {
+      rc.setIndicatorDot(closestResource, 0, 0, 255);
+//      if (rpCenter.equals(closestResource)) {
+//        closestResource = null;
+//      }
+      if (rc.canCompleteResourcePattern(closestResource)) {
+        rc.completeResourcePattern(closestResource);
+        map.tile(closestResource).lastCheckedRP = rc.getRoundNum();
 //        if (rc.canMark(rpCenter)) {
 //          rc.mark(rpCenter, true);
 //        }
-      } else if (rc.getType() == UnitType.SOLDIER && map.tile(rpCenter).lastCheckedRP < Math.max(rc.getRoundNum() - 25, 1)) {
-        // we can complete this pattern! let's see if it's possible
-        var pLeft = 25;
-        for (var tile : rc.senseNearbyMapInfos(rpCenter, 8)) {
-          // this should be exactly the correct tiles (bc 0,3 has r^2 9)
-          if (!tile.isPassable() || tile.getPaint().isEnemy() || !map.tile(tile.getMapLocation()).rpCompatible()) {
-            pLeft = -1;
-            break;
-          }
-          if (tile.getPaint().isAlly() && tile.getPaint().isSecondary() == map.tile(tile.getMapLocation()).secondary()) {
-            pLeft -= 1;
-          }
-        }
-        if (pLeft != -1) {
-          if (!rpCenter.equals(closestResource) || closestResourceSquaresLeft > pLeft || rpCenter.isWithinDistanceSquared(rc.getLocation(), 4)) {
-            closestResourceSquaresLeft = pLeft;
-          }
-          closestResource = rpCenter;
-        } else if (rpCenter.equals(closestResource)) {
-          closestResource = null;
-        }
-        if (pLeft == 0 && rpCenter.isWithinDistanceSquared(rc.getLocation(), 2)) {
-          if (rpCenter.equals(closestResource)) {
-            closestResource = null;
-          }
-          map.tile(rpCenter).lastCheckedRP = rc.getRoundNum();
-        }
+        closestResource = null;
       }
-      if (closestResource != null) {
-        rc.setIndicatorDot(closestResource, 255, 255, 255);
-        //rc.setIndicatorString("left: " + closestResourceSquaresLeft);
-      }
+//      else if (closestResource.isWithinDistanceSquared(rc.getLocation(), 2)) {
+//        var pLeft = 25;
+//        for (var tile : rc.senseNearbyMapInfos(rpCenter, 8)) {
+//          // this should be exactly the correct tiles (bc 0,3 has r^2 9)
+//          if (!tile.isPassable() || tile.getPaint().isEnemy() || !map.tile(tile.getMapLocation()).rpCompatible()) {
+//            pLeft = -1;
+//            break;
+//          }
+//          if (tile.getPaint().isAlly() && tile.getPaint().isSecondary() == map.tile(tile.getMapLocation()).secondary()) {
+//            pLeft -= 1;
+//          }
+//        }
+//        map.tile(closestResource).lastCheckedRP = rc.getRoundNum();
+//        closestResource = null;
+//      }
+//      else if (rc.getType() == UnitType.SOLDIER && map.tile(rpCenter).lastCheckedRP < Math.max(rc.getRoundNum() - 25, 1)) {
+//        // we can complete this pattern! let's see if it's possible
+//        var pLeft = 25;
+//        for (var tile : rc.senseNearbyMapInfos(rpCenter, 8)) {
+//          // this should be exactly the correct tiles (bc 0,3 has r^2 9)
+//          if (!tile.isPassable() || tile.getPaint().isEnemy() || !map.tile(tile.getMapLocation()).rpCompatible()) {
+//            pLeft = -1;
+//            break;
+//          }
+//          if (tile.getPaint().isAlly() && tile.getPaint().isSecondary() == map.tile(tile.getMapLocation()).secondary()) {
+//            pLeft -= 1;
+//          }
+//        }
+//        if (pLeft != -1) {
+//          if (!rpCenter.equals(closestResource) || closestResourceSquaresLeft > pLeft || rpCenter.isWithinDistanceSquared(rc.getLocation(), 4)) {
+//            closestResourceSquaresLeft = pLeft;
+//          }
+//          closestResource = rpCenter;
+//        } else if (rpCenter.equals(closestResource)) {
+//          closestResource = null;
+//        }
+//        if (pLeft == 0 && rpCenter.isWithinDistanceSquared(rc.getLocation(), 2)) {
+//          if (rpCenter.equals(closestResource)) {
+//            closestResource = null;
+//          }
+//          map.tile(rpCenter).lastCheckedRP = rc.getRoundNum();
+//        }
+//      }
+//      if (closestResource != null) {
+//        rc.setIndicatorDot(closestResource, 255, 255, 255);
+//        //rc.setIndicatorString("left: " + closestResourceSquaresLeft);
+//      }
     }
   }
 
@@ -198,9 +233,6 @@ public class RobotPlayer {
         new MapLocation(rc.getMapWidth() - 1, rc.getMapHeight() - 1),
     };
     var exploreIdx = 7;
-    if (rc.getRoundNum() < 3) {
-      exploreIdx = rc.getType().paintPerTurn > 0 ? 0 : 2;
-    }
 
     while (true) {
       try {
@@ -209,6 +241,10 @@ public class RobotPlayer {
 
         map.update();
         comms.update();
+
+        if (Micro.exploreTarget == null && (rc.getRoundNum() < 5 || rc.getID() % 8 < 4)) {
+          Micro.exploreTarget = exploreLocs[(rc.getID() + rc.getRoundNum()) % exploreLocs.length];
+        }
 
         switch (rc.getType()) {
           case SOLDIER -> {
@@ -253,7 +289,7 @@ public class RobotPlayer {
             if (rc.isActionReady()) {
               for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
                 if (tile.getPaint().isEnemy() && rc.canAttack(tile.getMapLocation())) {
-                  var ruin = map.ruinTarget != null && map.ruinTarget.center.isWithinDistanceSquared(tile.getMapLocation(), 8);
+                  var ruin = map.tile(tile.getMapLocation()).isInRuin();
                   if (!isInRuin || ruin) {
                     toMop = tile.getMapLocation();
                     isInRuin = ruin;
@@ -286,24 +322,27 @@ public class RobotPlayer {
             if (rc.getRoundNum() < 4) {
               toSpawn = UnitType.SOLDIER;
             }
-            if ((rc.getNumberTowers() > 2 || map.ruinTarget == null) && (rc.getRoundNum() < 50 || rc.getChips() > 1300)) {
+            if ((rc.getNumberTowers() > 2 || map.ruinTarget == null) && (rc.getRoundNum() < 20 || rc.getChips() > 1200)) {
               if (toSpawn == null) {
-                var splasherChance = 1.0 / 3.0;
+                var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
-                var mopperChance = 1.0 / 2.0;
+                var mopperChance = 2.0 / 5.0;
                 // More splashers on bigger maps
                 if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
-                  splasherChance = 2.0 / 5.0;
-                  mopperChance = 1.0 / 3.0;
+                  splasherChance = 1.0 / 5.0;
+                  //mopperChance = 1.0 / 3.0;
                 }
                 // More moppers on smaller maps
                 if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
-                  splasherChance = 1.0 / 5.0;
-                  mopperChance = 3.0 / 5.0;
+                  splasherChance = 1.0 / 10.0;
+                  mopperChance = 1.0 / 2.0;
+                } else if (rc.getRoundNum() < 40) {
+                  mopperChance = 0;
                 }
                 if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 100) {
                   splasherChance = 0;
                 }
+
                 toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
                     : rng() % 100 < mopperChance * 100.0 ? UnitType.MOPPER
                     : UnitType.SOLDIER;

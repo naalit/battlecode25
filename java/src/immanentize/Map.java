@@ -27,7 +27,9 @@ public class Map {
       if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
       type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
-      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 2 && (hash(center) % 5) == 0)
+      // then paint tower
+      type = rc.getNumberTowers() == 3 ? UnitType.LEVEL_ONE_PAINT_TOWER : type;
+      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 3 && (hash(center) % 5) == 0)
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
       return type;
     }
@@ -73,8 +75,10 @@ public class Map {
   public class Tile {
     public Tower tower;
     public MapLocation loc;
-    public int lastCheckedRP;
+    public int lastCheckedRP = -25;
     public Ruin ruin;
+    public boolean canBeRP = true;
+    public int nextRPCheck;
     public Team paintTeam;
 
     public Tile(MapLocation loc) {
@@ -99,6 +103,22 @@ public class Map {
       var s = resourcePattern[adjX % resourcePattern.length];
       return ruin.secondary(loc) == s;
     }
+
+    public void checkRP() throws GameActionException {
+      for (var tile : rc.senseNearbyMapInfos(loc, 8)) {
+        // this should be exactly the correct tiles (bc 0,3 has r^2 9)
+        if (!tile.isPassable()) {
+          canBeRP = false;
+          nextRPCheck = 5000;
+          break;
+        }
+        if (tile.getPaint().isEnemy() || !map.tile(tile.getMapLocation()).rpCompatible()) {
+          canBeRP = false;
+          nextRPCheck = rc.getRoundNum() + 10;
+          break;
+        }
+      }
+    }
   }
 
   private final Tile[][] tiles;
@@ -115,8 +135,9 @@ public class Map {
   public ArrayList<Tower> towers = new ArrayList<>();
   public Ruin ruinTarget;
   public Tower closestPaintTower;
+  public Tower closestEnemyTower;
 
-  public MapLocation findRPCenter(MapLocation loc) {
+  public MapLocation findRPCenter(MapLocation loc) throws GameActionException {
     var vx = Math.max(loc.x - 1, 0);
     var vy = Math.max(loc.y - 1, 0);
     var cx = (vx - vy / 3) / 3;
@@ -125,13 +146,23 @@ public class Map {
     MapLocation best = null;
     var bestDist = 0;
     // not exact closest, so look one cell in each direction for the closest center
+    var checked = 0;
     for (int i = -1; i <= 1; i++) {
       for (int j = -1; j <= 1; j++) {
         var c = new MapLocation(3 * (cx + i) + (cy + j) + 2, 3 * (cy + j) - (cx + i) + 2);
-        var d = loc.distanceSquaredTo(c);
-        if (best == null || d < bestDist) {
-          bestDist = d;
-          best = c;
+        if (c.x < 2 || c.y < 2 || c.x > width - 3 || c.y > height - 3) continue;
+        var t = tile(c);
+        if (t.lastCheckedRP + 25 > rc.getRoundNum()) continue;
+        if (checked < 4 && t.nextRPCheck < rc.getRoundNum()) {
+          t.checkRP();
+          checked += 1;
+        }
+        if (t.canBeRP) {
+          var d = loc.distanceSquaredTo(c);
+          if (best == null || d < bestDist) {
+            bestDist = d;
+            best = c;
+          }
         }
       }
     }
@@ -232,11 +263,17 @@ public class Map {
     }
 
     closestPaintTower = null;
+    closestEnemyTower = null;
     for (var tower : towers) {
       rc.setIndicatorDot(tower.loc, 255, 0, 0);
       if (tower.team == rc.getTeam() && tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) {
         if (closestPaintTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestPaintTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestPaintTower = tower;
+        }
+      }
+      if (tower.team == rc.getTeam().opponent()) {
+        if (closestEnemyTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestEnemyTower.loc.distanceSquaredTo(rc.getLocation()))) {
+          closestEnemyTower = tower;
         }
       }
     }
