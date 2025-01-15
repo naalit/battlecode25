@@ -93,14 +93,12 @@ public class Map {
     public boolean secondary() throws GameActionException {
       if (ruin != null) return ruin.secondary(loc);
 
-      var adjX = loc.x + 3 * loc.y;
-      return resourcePattern[adjX % resourcePattern.length];
+      return resourcePattern[loc.x % 4][loc.y % 4];
     }
 
     public boolean rpCompatible() throws GameActionException {
       if (ruin == null) return true;
-      var adjX = loc.x + 3 * loc.y;
-      var s = resourcePattern[adjX % resourcePattern.length];
+      var s = resourcePattern[loc.x % 4][loc.y % 4];
       return ruin.secondary(loc) == s;
     }
 
@@ -125,13 +123,7 @@ public class Map {
   public final Tile[][] tiles;
   public final int height, width;
   // i think this is the optimal tiling
-  public final boolean[] resourcePattern = {
-      true, false,
-      true, false, true,
-      false,
-      true, false, false,
-      false,
-  };
+  public final boolean[][] resourcePattern;
   public ArrayList<Ruin> ruins = new ArrayList<>();
   public ArrayList<Tower> towers = new ArrayList<>();
   public Ruin ruinTarget;
@@ -139,10 +131,8 @@ public class Map {
   public Tower closestEnemyTower;
 
   public MapLocation findRPCenter(MapLocation loc) throws GameActionException {
-    var vx = Math.max(loc.x - 1, 0);
-    var vy = Math.max(loc.y - 1, 0);
-    var cx = (vx - vy / 3) / 3;
-    var cy = (vy + cx) / 3;
+    var cx = loc.x / 4;
+    var cy = loc.y / 4;
     //RobotPlayer.rc.setIndicatorString("c " + cx + ", " + cy);
     MapLocation best = null;
     var bestDist = 0;
@@ -150,7 +140,7 @@ public class Map {
     var checked = 0;
     for (int i = -1; i <= 1; i++) {
       for (int j = -1; j <= 1; j++) {
-        var c = new MapLocation(3 * (cx + i) + (cy + j) + 2, 3 * (cy + j) - (cx + i) + 2);
+        var c = new MapLocation(4 * (cx + i) + 2, 4 * (cy + j) + 2);
         if (c.x < 2 || c.y < 2 || c.x > width - 3 || c.y > height - 3) continue;
         var t = tile(c);
         if (t.lastCheckedRP + 25 > rc.getRoundNum()) continue;
@@ -174,6 +164,7 @@ public class Map {
     height = rc.getMapHeight();
     width = rc.getMapWidth();
     tiles = new Tile[width][];
+    resourcePattern = rc.getResourcePattern();
   }
 
   public Tile tile(MapLocation loc) {

@@ -172,7 +172,7 @@ public class Micro {
         if (p == PaintType.EMPTY) v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
         else {
           var s = mtile.ruin != null ? mtile.ruin.secondary(tile.getMapLocation())
-              : map.resourcePattern[tile.getMapLocation().x + 3 * tile.getMapLocation().y % map.resourcePattern.length];
+              : map.resourcePattern[tile.getMapLocation().x % 4][tile.getMapLocation().y % 4];
           if (s != p.isSecondary()) v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
         }
 
