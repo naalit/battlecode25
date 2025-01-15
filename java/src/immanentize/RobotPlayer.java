@@ -325,7 +325,7 @@ public class RobotPlayer {
               if (toSpawn == null) {
                 var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
-                var mopperChance = 2.0 / 5.0;
+                var mopperChance = 3.0 / 5.0;
                 // More splashers on bigger maps
                 if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
                   splasherChance = 1.0 / 5.0;
@@ -334,10 +334,11 @@ public class RobotPlayer {
                 // More moppers on smaller maps
                 if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
                   splasherChance = 1.0 / 10.0;
-                  mopperChance = 1.0 / 2.0;
-                } else if (rc.getRoundNum() < 40) {
-                  mopperChance = 0;
+                  //mopperChance = 1.0 / 2.0;
                 }
+//                else if (rc.getRoundNum() < 40) {
+//                  mopperChance = 0;
+//                }
                 if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 100) {
                   splasherChance = 0;
                 }

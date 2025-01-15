@@ -13,8 +13,8 @@ import static immanentize.RobotPlayer.*;
 public class Micro {
   static final double FREE_PAINT_TARGET = 0.2;
   static final double KILL_VALUE = 200;
-  static final double MAP_PAINT_VALUE = 5.0;
-  static final double FREE_PAINT_VALUE = 0.2;
+  static final double MAP_PAINT_VALUE = 10.0;
+  static final double FREE_PAINT_VALUE = 2.0;
   static final int SOLDIER_PAINT_MIN = 10;
   static final int MOPPER_PAINT_MIN = 50;
   static final int SPLASHER_PAINT_MIN = 50;
@@ -204,10 +204,15 @@ public class Micro {
   }
 
   static void processAttacks(MicroLoc[] locs, MicroBot bot) throws GameActionException {
+    var mopReady = bot.canAttack && bot.type == UnitType.MOPPER && bot.paint > 60;
     for (var unit : rc.senseNearbyRobots(bot.startPos, 8, rc.getTeam())) {
       for (var loc : locs) {
         if (unit.type.isRobotType() && unit.location.isWithinDistanceSquared(loc.loc, 2)) {
-          loc.adjacentAllies += 1;
+          if (mopReady && unit.type != UnitType.MOPPER && unit.paintAmount < unit.type.paintCapacity) {
+            mopReady = false;
+          } else {
+            loc.adjacentAllies += 1;
+          }
         }
       }
     }
@@ -255,6 +260,7 @@ public class Micro {
       if (target != null) {
         if (!target.equals(lastTarget)) {
           recentLocs.clear();
+          recentLocs.add(bot.startPos);
         }
         lastTarget = target;
         rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
@@ -277,7 +283,7 @@ public class Micro {
 //        score -= target.distanceSquaredTo(loc.loc) * 0.1 * (double) (rtargets.length - i) / rtargets.length;
 //      }
       if (target != null) {
-        score -= (target.distanceSquaredTo(loc.loc) - pTargetDist) * 0.02;// * (double) (rtargets.length - i) / rtargets.length;
+        score -= (target.distanceSquaredTo(loc.loc) - pTargetDist) * 0.003;// * (double) (rtargets.length - i) / rtargets.length;
       }
       if (loc.attackScore == 0.0 && recentLocs.contains(loc.loc)) {
         score -= (rlCounter + 1) * 0.2;
@@ -306,6 +312,9 @@ public class Micro {
 
       rc.move(rc.getLocation().directionTo(loc.loc));
     } else if (rc.isMovementReady()) {
+      if (recentLocs.size() >= 12) recentLocs.removeFirst();
+      recentLocs.addLast(rc.getLocation());
+      rlCounter += 1;
       exploreTarget = null;
     }
     // always do this
@@ -319,6 +328,7 @@ public class Micro {
     }
     var end = Clock.getBytecodeNum();
     rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
+    rc.setIndicatorString("rlcounter: " + rlCounter);
   }
 }
 
