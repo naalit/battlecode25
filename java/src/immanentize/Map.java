@@ -224,6 +224,10 @@ public class Map {
   }
 
   public void update() throws GameActionException {
+    if (rc.getType().isTowerType()) {
+      tryAddTower(rc.getLocation(), rc.getTeam(), rc.getType().getBaseType(), rc.getRoundNum());
+    }
+
     for (var ruinLoc : rc.senseNearbyRuins(-1)) {
       if (rc.canSenseRobotAtLocation(ruinLoc)) continue;
       var ruin = tryAddRuin(ruinLoc, rc.getRoundNum());

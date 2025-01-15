@@ -67,7 +67,7 @@ public class Comms {
 
     var sent = 0;
     var isTower = rc.getType().isTowerType();
-    var max = isTower ? GameConstants.MAX_MESSAGES_SENT_TOWER : GameConstants.MAX_MESSAGES_SENT_ROBOT;
+    var max = isTower ? GameConstants.MAX_MESSAGES_SENT_TOWER - 5 : GameConstants.MAX_MESSAGES_SENT_ROBOT;
     var ulength = RobotPlayer.nearbyAllies.length;
     var mlength = map.ruins.size() + map.towers.size();
     if (ulength > 0 && mlength > 0) {
@@ -91,6 +91,26 @@ public class Comms {
           sent += 1;
         }
         if (uidx % ulength == ustart || midx % mlength == mstart) break;
+      }
+    }
+    if (isTower && mlength != 0) {
+      sent = 0;
+      var mstart = midx % mlength;
+      while (rc.canBroadcastMessage() && sent < 3) {
+        var i = midx++ % mlength;
+        Message m;
+        if (i < map.ruins.size()) {
+          var ruin = map.ruins.get(i);
+          m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
+        } else {
+          var tower = map.towers.get(i - map.ruins.size());
+          m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);
+          m.towerType = tower.type;
+          m.team = tower.team;
+        }
+        rc.broadcastMessage(m.encode());
+        if (midx % mlength == mstart) break;
+        sent += 1;
       }
     }
   }

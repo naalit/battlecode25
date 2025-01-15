@@ -272,7 +272,7 @@ public class RobotPlayer {
             if (rc.getPaint() >= minPaint() + 10 && rc.isActionReady()) {
               for (var unit : rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam())) {
                 if (unit.getType().isRobotType() && unit.getType() != UnitType.MOPPER && unit.paintAmount < unit.getType().paintCapacity) {
-                  var transfer = Math.min(rc.getPaint() - minPaint(), unit.getType().paintCapacity - unit.paintAmount);
+                  var transfer = Math.min(rc.getPaint() - minPaint() - 3, unit.getType().paintCapacity - unit.paintAmount);
                   rc.transferPaint(unit.location, transfer);
                   break;
                 }
@@ -325,7 +325,7 @@ public class RobotPlayer {
               if (toSpawn == null) {
                 var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
-                var mopperChance = 3.0 / 5.0;
+                var mopperChance = 3.0 / 6.0;
                 // More splashers on bigger maps
                 if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
                   splasherChance = 1.0 / 5.0;
