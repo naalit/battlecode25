@@ -121,10 +121,11 @@ public class Map {
     }
   }
 
-  private final Tile[][] tiles;
-  private final int height, width;
+  // these would ideally be private but we need to inline `tile()` in hot loops (micro)
+  public final Tile[][] tiles;
+  public final int height, width;
   // i think this is the optimal tiling
-  private final boolean[] resourcePattern = {
+  public final boolean[] resourcePattern = {
       true, false,
       true, false, true,
       false,

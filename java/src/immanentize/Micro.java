@@ -13,8 +13,7 @@ import static immanentize.RobotPlayer.*;
 public class Micro {
   static final double FREE_PAINT_TARGET = 0.2;
   static final double KILL_VALUE = 200;
-  static final double PAINT_VALUE = 5.0;
-  // relative to paint on the map (0.2 matches soldier paint cost)
+  static final double MAP_PAINT_VALUE = 5.0;
   static final double FREE_PAINT_VALUE = 0.2;
   static final int SOLDIER_PAINT_MIN = 10;
   static final int MOPPER_PAINT_MIN = 50;
@@ -51,9 +50,10 @@ public class Micro {
       // Soldier: target mark location
       new TargetType(() -> Optional.ofNullable(map.ruinTarget).map(x -> x.center.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getID() % 3 != 0 && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.tile(x).isInRuin())),
       // Soldier: target unpainted tower squares
-      new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).map(r -> {
-        var dir = rc.getLocation().directionTo(r.center);
-        return r.center.add(dir).add(dir);
+      new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getLocation().isWithinDistanceSquared(x.center, 8)).map(r -> {
+        var dx = rc.getLocation().x == r.center.x ? (rc.getLocation().y > r.center.y ? 1 : -1) : 0;
+        var dy = rc.getLocation().y == r.center.y ? (rc.getLocation().x > r.center.x ? -1 : 1) : 0;
+        return r.center.translate(dx, dy);
       })),
 //      new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
 //        Optional<MapLocation> target = Optional.empty();
@@ -140,11 +140,11 @@ public class Micro {
             var paint = Math.min(10, unit.paintAmount);
             if (rc.senseMapInfo(unit.location).getPaint().isEnemy()) paint += 1;
             // TODO verify that this is true (5 paint to our team regardless of amount of paint stolen) (a dev said they think this is how it works)
-            score = (paint + 5) * PAINT_VALUE;
+            score = (paint + Math.min(5, bot.type.paintCapacity - bot.paint)) * FREE_PAINT_VALUE;
           } else if (unit.type == UnitType.SOLDIER && rc.senseMapInfo(unit.location).getPaint() == PaintType.EMPTY) {
-            score += PAINT_VALUE;
+            score += MAP_PAINT_VALUE;
           }
-          score -= bot.type.attackCost * FREE_PAINT_VALUE * PAINT_VALUE;
+          score -= bot.type.attackCost * FREE_PAINT_VALUE;
           if (score > loc.attackScore) {
             loc.attackScore = score;
             loc.attackTarget = unit.location;
@@ -158,84 +158,64 @@ public class Micro {
     }
   }
 
-  static double[][] processSplasherLocs(MapLocation center) throws GameActionException {
-    var locs = new double[9][9];
-    //     x . .
-    //   x x x . .
-    // x x A x x .
-    //   x x x
-    //     x
-    int[] aoeOffsetsX = {0, -1, 0, 1, -2, -1, 0, 1, 2, -1, 0, 1, 0};
-    int[] aoeOffsetsY = {2, 1, 1, 1, 0, 0, 0, 0, 0, -1, -1, -1, -2};
-    var damage = UnitType.SPLASHER.aoeAttackStrength;
-    for (var unit : nearbyEnemies) {
-      if (unit.getType().isRobotType()) continue;
-      var x = unit.location.x - center.x + 3;
-      var y = unit.location.y - center.y + 3;
-      for (int i = 0; i < aoeOffsetsY.length; i++) {
-        var ax = x + aoeOffsetsX[i];
-        var ay = y + aoeOffsetsY[i];
-        if (ax >= 0 && ay >= 0 && ax < 9 && ay < 9) {
-          locs[ax][ay] += Math.min(damage, unit.health) + (damage >= unit.health ? KILL_VALUE : 0);
+  static void processTiles(MicroLoc[] locs, MicroBot bot) throws GameActionException {
+    // for soldiers: normal action radius 9, adjusted for movement is 18
+    // for moppers: 2 / 8
+    var tiles = map.tiles;
+    if (bot.type == UnitType.SOLDIER) {
+      for (var tile : rc.senseNearbyMapInfos(bot.startPos, 18)) {
+        var p = tile.getPaint();
+        var v = 0.0;
+        if (p.isEnemy()) continue;
+
+        var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
+        if (p == PaintType.EMPTY) v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+        else {
+          var s = mtile.ruin != null ? mtile.ruin.secondary(tile.getMapLocation())
+              : map.resourcePattern[tile.getMapLocation().x + 3 * tile.getMapLocation().y % map.resourcePattern.length];
+          if (s != p.isSecondary()) v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
         }
-      }
-    }
-    // Not sure we can narrow it down at all if we're allowed to move once and then attack...
-    for (var tile : rc.senseNearbyMapInfos()) {
-      if (!tile.isPassable()) continue;
-      var p = tile.getPaint();
-      if (p.isAlly()) continue;
-      var x = tile.getMapLocation().x - center.x + 3;
-      var y = tile.getMapLocation().y - center.y + 3;
-      if (p == PaintType.EMPTY) {
-        for (int i = 0; i < aoeOffsetsY.length; i++) {
-          var ax = x + aoeOffsetsX[i];
-          var ay = y + aoeOffsetsY[i];
-          if (ax >= 0 && ay >= 0 && ax < 9 && ay < 9) {
-            locs[ax][ay] += PAINT_VALUE;
-          }
-        }
-      } else if (p.isEnemy()) {
-        for (int i = -1; i < 2; i++) {
-          for (int j = -1; j < 2; j++) {
-            var ax = x + i;
-            var ay = y + j;
-            if (ax >= 0 && ay >= 0 && ax < 9 && ay < 9) {
-              locs[ax][ay] += 2 * PAINT_VALUE;
+
+        if (v != 0.0) {
+          for (var loc : locs) {
+            if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 9)) {
+              loc.attackScore = v;
+              loc.attackTarget = tile.getMapLocation();
             }
           }
         }
       }
+    } else if (bot.type == UnitType.MOPPER) {
+      for (var tile : rc.senseNearbyMapInfos(bot.startPos, 8)) {
+        var p = tile.getPaint();
+        if (!p.isEnemy()) continue;
+
+        var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
+        var v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+
+        for (var loc : locs) {
+          if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 2)) {
+            loc.attackScore = v;
+            loc.attackTarget = tile.getMapLocation();
+          }
+        }
+      }
     }
-    return locs;
   }
 
   static void processAttacks(MicroLoc[] locs, MicroBot bot) throws GameActionException {
     processEnemies(locs, bot);
     if (bot.type == UnitType.SPLASHER && bot.canAttack) {
-      var splashLocs = processSplasherLocs(bot.startPos);
-      var cost = bot.type.attackCost * FREE_PAINT_VALUE * PAINT_VALUE;
-      for (var loc : locs) {
-        var x = loc.loc.x - bot.startPos.x + 3;
-        var y = loc.loc.y - bot.startPos.y + 3;
-        MapLocation bestLoc = null;
-        var bestScore = 0.0;
-        int[] aoeOffsetsX = {0, -1, 0, 1, -2, -1, 0, 1, 2, -1, 0, 1, 0};
-        int[] aoeOffsetsY = {2, 1, 1, 1, 0, 0, 0, 0, 0, -1, -1, -1, -2};
-        for (int i = 0; i < aoeOffsetsY.length; i++) {
-          var ax = x + aoeOffsetsX[i];
-          var ay = y + aoeOffsetsY[i];
-          if (ax >= 0 && ay >= 0 && ax < 9 && ay < 9) {
-            var score = splashLocs[ax][ay] - cost;
-            if (score > bestScore) {
-              bestScore = score;
-              bestLoc = loc.loc.translate(aoeOffsetsX[i], aoeOffsetsY[i]);
-            }
-          }
-        }
-        loc.attackTarget = bestLoc;
-        loc.attackScore = bestScore;
-      }
+      var startBt = Clock.getBytecodeNum();
+      var startTurn = rc.getRoundNum();
+
+      MicroHelper.processSplasherLocsGenHelper(bot.startPos, locs);
+      //processSplasherAttack(locs, bot);
+
+      var endBt = Clock.getBytecodeNum();
+      var endTurn = rc.getRoundNum();
+      var bt = GameConstants.ROBOT_BYTECODE_LIMIT * (endTurn - startTurn) + (endBt - startBt);
+      rc.setIndicatorString("splasher scan: " + bt + "bt (" + startBt + "/" + startTurn + " - " + endBt + "/" + endTurn + ")");
     }
   }
 
@@ -294,8 +274,8 @@ public class Micro {
         score -= (rlCounter + 1) * 0.2;
       }
       var paint = rc.senseMapInfo(loc.loc).getPaint();
-      if (paint.isEnemy()) score -= 2 * pmul * PAINT_VALUE;
-      else if (paint == PaintType.EMPTY) score -= pmul * PAINT_VALUE;
+      if (paint.isEnemy()) score -= 2 * pmul * FREE_PAINT_VALUE;
+      else if (paint == PaintType.EMPTY) score -= pmul * FREE_PAINT_VALUE;
       loc.score = score;
       if (best == null || loc.score > best.score) best = loc;
     }
@@ -323,6 +303,8 @@ public class Micro {
     if (rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY && rc.getType() == UnitType.SOLDIER) {
       rc.attack(rc.getLocation());
     } else if (loc.attackScore > 0.0) {
+      //rc.setIndicatorString("" + loc.attackScore + ": " + loc.attackTarget);
+      rc.setIndicatorDot(loc.attackTarget, 0, 0, 0);
       rc.attack(loc.attackTarget);
       recentLocs.clear();
     }
