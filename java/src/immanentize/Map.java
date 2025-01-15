@@ -75,7 +75,6 @@ public class Map {
   public class Tile {
     public Tower tower;
     public MapLocation loc;
-    public int lastCheckedRP = -25;
     public Ruin ruin;
     public boolean canBeRP = true;
     public int nextRPCheck;
@@ -103,6 +102,7 @@ public class Map {
     }
 
     public void checkRP() throws GameActionException {
+      nextRPCheck = rc.getRoundNum() + 10;
       for (var tile : rc.senseNearbyMapInfos(loc, 8)) {
         // this should be exactly the correct tiles (bc 0,3 has r^2 9)
         if (!tile.isPassable()) {
@@ -143,7 +143,10 @@ public class Map {
         var c = new MapLocation(4 * (cx + i) + 2, 4 * (cy + j) + 2);
         if (c.x < 2 || c.y < 2 || c.x > width - 3 || c.y > height - 3) continue;
         var t = tile(c);
-        if (t.lastCheckedRP + 25 > rc.getRoundNum()) continue;
+        if (rc.canSenseLocation(c) && rc.senseMapInfo(c).isResourcePatternCenter()) {
+          t.canBeRP = false;
+          t.nextRPCheck = rc.getRoundNum() + 25;
+        }
         if (checked < 4 && t.nextRPCheck < rc.getRoundNum()) {
           t.checkRP();
           checked += 1;

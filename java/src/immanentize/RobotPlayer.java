@@ -160,7 +160,6 @@ public class RobotPlayer {
 //      }
       if (rc.canCompleteResourcePattern(closestResource)) {
         rc.completeResourcePattern(closestResource);
-        map.tile(closestResource).lastCheckedRP = rc.getRoundNum();
 //        if (rc.canMark(rpCenter)) {
 //          rc.mark(rpCenter, true);
 //        }

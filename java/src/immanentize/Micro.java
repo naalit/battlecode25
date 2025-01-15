@@ -204,6 +204,14 @@ public class Micro {
   }
 
   static void processAttacks(MicroLoc[] locs, MicroBot bot) throws GameActionException {
+    for (var unit : rc.senseNearbyRobots(bot.startPos, 8, rc.getTeam())) {
+      for (var loc : locs) {
+        if (unit.type.isRobotType() && unit.location.isWithinDistanceSquared(loc.loc, 2)) {
+          loc.adjacentAllies += 1;
+        }
+      }
+    }
+
     processEnemies(locs, bot);
     if (bot.type == UnitType.SPLASHER && bot.canAttack) {
       var startBt = Clock.getBytecodeNum();
@@ -262,6 +270,7 @@ public class Micro {
     var defenseMult = ((double) nearbyEnemies.length + 1) / totalNearby * 0.4 + 0.8;
     for (var loc : locs) {
       var score = loc.attackScore * attackMult - loc.incomingDamage * defenseMult;
+      score -= loc.adjacentAllies * FREE_PAINT_VALUE * 2; // both robots lose paint
 //      for (var i = 0; i < rtargets.length; i++) {
 //        var target = rtargets[i];//.fun().get();
 //        //if (target.isEmpty()) continue;
