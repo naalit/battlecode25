@@ -15,7 +15,7 @@ public class Micro {
   static final double KILL_VALUE = 200;
   static final double MAP_PAINT_VALUE = 10.0;
   static final double FREE_PAINT_VALUE = 2.0;
-  static final int SOLDIER_PAINT_MIN = 10;
+  static final int SOLDIER_PAINT_MIN = 15;
   static final int MOPPER_PAINT_MIN = 50;
   static final int SPLASHER_PAINT_MIN = 50;
 
@@ -46,10 +46,26 @@ public class Micro {
               .filter(x -> x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
-      new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && rc.getLocation().isWithinDistanceSquared(x, 8))),
+      new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && (!doTowers() || map.ruinTarget == null) && rc.getLocation().isWithinDistanceSquared(x, 8))),
       // Soldier: target mark location
-      new TargetType(() -> Optional.ofNullable(map.ruinTarget).map(x -> x.center.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getID() % 3 != 0 && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.tile(x).isInRuin())),
+      //new TargetType(() -> Optional.ofNullable(map.ruinTarget).map(x -> x.center.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getID() % 3 != 0 && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.tile(x).isInRuin())),
       // Soldier: target unpainted tower squares
+      new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
+        Optional<MapLocation> target = Optional.empty();
+        try {
+          MapLocation[] corners = {ruin.center.translate(-2, -2), ruin.center.translate(2, -2), ruin.center.translate(-2, 2), ruin.center.translate(2, 2)};
+          for (var loc : corners) {
+            if (!rc.canSenseLocation(loc)) continue;
+            if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != map.tile(loc).secondary()) {
+              target = Optional.of(loc);
+              break;
+            }
+          }
+        } catch (GameActionException e) {
+          throw new RuntimeException(e);
+        }
+        return target;
+      })),
       new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getLocation().isWithinDistanceSquared(x.center, 8)).map(r -> {
         var dx = rc.getLocation().x == r.center.x ? (rc.getLocation().y > r.center.y ? 1 : -1) : 0;
         var dy = rc.getLocation().y == r.center.y ? (rc.getLocation().x > r.center.x ? -1 : 1) : 0;
@@ -75,7 +91,7 @@ public class Micro {
 //        return target;
 //      })),
       // Soldier: target nearly-full resource pattern
-      new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost))),
+      new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && (!doTowers() || map.ruinTarget == null))),
       // || closestResourceSquaresLeft == 0))),// && closestResourceSquaresLeft < 12)),
       // Soldier: target ruins
       new TargetType(() -> Optional.ofNullable(map.ruinTarget)

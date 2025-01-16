@@ -56,12 +56,12 @@ public class RobotPlayer {
       if (rc.isActionReady()) {
         Arrays.stream(rc.senseNearbyRobots(2, rc.getTeam()))
             // TODO constant for this
-            .filter(x -> x.getType().isTowerType() && x.paintAmount > (x.getType().paintPerTurn > 0 ? 200 : 0))
+            .filter(x -> x.getType().isTowerType() && x.paintAmount >= (x.getType().paintPerTurn < 0 ? 200 : 0) + 50)
             .findFirst()
             .ifPresent(x -> {
               // really annoying that we have to do this (since λ doesn't support throws)
               try {
-                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - (x.getType().paintPerTurn > 0 ? 200 : 0)));
+                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - (x.getType().paintPerTurn < 0 ? 200 : 0)));
               } catch (GameActionException e) {
                 throw new RuntimeException(e);
               }
@@ -218,6 +218,7 @@ public class RobotPlayer {
   static int upgradeTurns = 0;
   static UnitType toSpawn = null;
   static Integer[] ids = {0, 0, 0, 0};
+  static int turnsSinceSeenEnemy = 0;
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
@@ -237,6 +238,8 @@ public class RobotPlayer {
       try {
         nearbyAllies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam());
         nearbyEnemies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam().opponent());
+//        if (nearbyEnemies.length == 0) turnsSinceSeenEnemy += 1;
+//        else turnsSinceSeenEnemy = 0;
 
         map.update();
         comms.update();
@@ -335,10 +338,9 @@ public class RobotPlayer {
                 if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
                   splasherChance = 1.0 / 10.0;
                   //mopperChance = 1.0 / 2.0;
+                } else if (rc.getRoundNum() < 40) {
+                  mopperChance = 0;
                 }
-//                else if (rc.getRoundNum() < 40) {
-//                  mopperChance = 0;
-//                }
                 if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 100) {
                   splasherChance = 0;
                 }
@@ -365,6 +367,10 @@ public class RobotPlayer {
                 toSpawn = null;
               }
             }
+
+//            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150) {
+//              rc.disintegrate();
+//            }
           }
         }
       } catch (Exception e) {

@@ -251,12 +251,14 @@ public class Map {
     ruinTarget = null;
     if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
       for (var ruin : ruins) {
-        rc.setIndicatorDot(ruin.center, 255, 0, 255);
         if ((rc.getType() == UnitType.MOPPER || ruin.enemyTiles == 0) &&
             (ruinTarget == null
                 //|| ruin.allyTiles > ruinTarget.allyTiles
                 || ruin.center.isWithinDistanceSquared(rc.getLocation(), ruinTarget.center.distanceSquaredTo(rc.getLocation())))) {
+          rc.setIndicatorDot(ruin.center, 255, 255, 255);
           ruinTarget = ruin;
+        } else {
+          rc.setIndicatorDot(ruin.center, 255, 0, 255);
         }
       }
     }
