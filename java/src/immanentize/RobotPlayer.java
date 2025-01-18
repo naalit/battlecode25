@@ -56,12 +56,12 @@ public class RobotPlayer {
       if (rc.isActionReady()) {
         Arrays.stream(rc.senseNearbyRobots(2, rc.getTeam()))
             // TODO constant for this
-            .filter(x -> x.getType().isTowerType() && x.paintAmount >= (x.getType().paintPerTurn < 0 ? 200 : 0) + 50)
+            .filter(x -> x.getType().isTowerType() && x.paintAmount >= (x.getType().paintPerTurn > 0 ? 000 : 0) + 50)
             .findFirst()
             .ifPresent(x -> {
               // really annoying that we have to do this (since λ doesn't support throws)
               try {
-                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - (x.getType().paintPerTurn < 0 ? 200 : 0)));
+                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - (x.getType().paintPerTurn > 0 ? 000 : 0)));
               } catch (GameActionException e) {
                 throw new RuntimeException(e);
               }
@@ -238,27 +238,39 @@ public class RobotPlayer {
       try {
         nearbyAllies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam());
         nearbyEnemies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam().opponent());
-//        if (nearbyEnemies.length == 0) turnsSinceSeenEnemy += 1;
-//        else turnsSinceSeenEnemy = 0;
+        if (nearbyEnemies.length == 0) turnsSinceSeenEnemy += 1;
+        else turnsSinceSeenEnemy = 0;
 
         map.update();
+        var q = Clock.getBytecodeNum();
         comms.update();
 
-        if (Micro.exploreTarget == null && (rc.getRoundNum() < 5 || rc.getID() % 8 < 4)) {
+        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && (rc.getRoundNum() < 5 || rc.getID() % 8 < 4)) {
           Micro.exploreTarget = exploreLocs[(rc.getID() + rc.getRoundNum()) % exploreLocs.length];
+        }
+        for (int y = -4; y < 5; y++) {
+          var loc = rc.getLocation().translate(y, 0);
+          if (rc.onTheMap(loc)) {
+            map.tile(loc);
+          }
         }
 
         switch (rc.getType()) {
           case SOLDIER -> {
+            var a = Clock.getBytecodeNum();
             Micro.doMicro();
+            var b = Clock.getBytecodeNum();
 
             // Try to build ruins
             checkRuins();
+            var c = Clock.getBytecodeNum();
 
             maybeReplenishPaint();
+            var d = Clock.getBytecodeNum();
+            rc.setIndicatorString(q + ", " + a + ", " + b + ", " + c + ", " + d);
 
             // Try to paint a square in range
-            doPaint();
+//            doPaint();
           }
           case SPLASHER -> {
             Micro.doMicro();
@@ -286,21 +298,21 @@ public class RobotPlayer {
             checkRuins();
 
             // Remove enemy paint
-            MapLocation toMop = null;
-            var isInRuin = false;
-            if (rc.isActionReady()) {
-              for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
-                if (tile.getPaint().isEnemy() && rc.canAttack(tile.getMapLocation())) {
-                  var ruin = map.tile(tile.getMapLocation()).isInRuin();
-                  if (!isInRuin || ruin) {
-                    toMop = tile.getMapLocation();
-                    isInRuin = ruin;
-                  }
-                }
-              }
-            }
-            if (toMop != null)
-              rc.attack(toMop);
+//            MapLocation toMop = null;
+//            var isInRuin = false;
+//            if (rc.isActionReady()) {
+//              for (var tile : rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared)) {
+//                if (tile.getPaint().isEnemy() && rc.canAttack(tile.getMapLocation())) {
+//                  var ruin = map.tile(tile.getMapLocation()).isInRuin();
+//                  if (!isInRuin || ruin) {
+//                    toMop = tile.getMapLocation();
+//                    isInRuin = ruin;
+//                  }
+//                }
+//              }
+//            }
+//            if (toMop != null)
+//              rc.attack(toMop);
 
             maybeReplenishPaint();
           }
@@ -324,25 +336,28 @@ public class RobotPlayer {
             if (rc.getRoundNum() < 4) {
               toSpawn = UnitType.SOLDIER;
             }
-            if ((rc.getNumberTowers() > 2 || map.ruinTarget == null) && (rc.getRoundNum() < 20 || rc.getChips() > 1200)) {
+            if (/*(rc.getNumberTowers() > 2 || map.ruinTarget == null) &&*/ (rc.getRoundNum() < 20 || rc.getChips() > 1200)) {
               if (toSpawn == null) {
                 var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
-                var mopperChance = 3.0 / 6.0;
+                var mopperChance = 2.0 / 5.0;
                 // More splashers on bigger maps
                 if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
                   splasherChance = 1.0 / 5.0;
                   //mopperChance = 1.0 / 3.0;
                 }
                 // More moppers on smaller maps
-                if (rc.getMapHeight() <= 20 && rc.getMapWidth() <= 20) {
-                  splasherChance = 1.0 / 10.0;
-                  //mopperChance = 1.0 / 2.0;
-                } else if (rc.getRoundNum() < 40) {
+                if (rc.getMapHeight() <= 25 && rc.getMapWidth() <= 25) {
+                  //ssplasherChance = 1.0 / 10.0;
+                  mopperChance = 3.0 / 5.0;
+                } else if (rc.getRoundNum() < 30) {
                   mopperChance = 0;
                 }
                 if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 100) {
                   splasherChance = 0;
+                }
+                if (rc.getRoundNum() > 500) {
+                  mopperChance = 3.0 / 5.0;
                 }
 
                 toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
@@ -368,9 +383,10 @@ public class RobotPlayer {
               }
             }
 
-//            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150) {
-//              rc.disintegrate();
-//            }
+            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150) {
+              rc.mark(rc.getLocation().add(Direction.NORTH), false);
+              rc.disintegrate();
+            }
           }
         }
       } catch (Exception e) {

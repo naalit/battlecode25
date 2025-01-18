@@ -12,9 +12,14 @@ import static immanentize.RobotPlayer.*;
 
 public class Micro {
   static final double FREE_PAINT_TARGET = 0.2;
-  static final double KILL_VALUE = 200;
-  static final double MAP_PAINT_VALUE = 10.0;
+  static final double HP_TOTAL_VALUE = 3.0;
+  static final double HP_FIXED_VALUE = 0.5;
+  static final double KILL_VALUE = 2000.0;
+  static final double MAP_PAINT_VALUE = 15.0;
+  // This number is multiplied by both the fixed and variable components, then they're added together
+  // So for FREE_PAINT_FIXED_VALUE = 1.0, the max value is FREE_PAINT_VALUE * 2
   static final double FREE_PAINT_VALUE = 2.0;
+  static final double FREE_PAINT_FIXED_VALUE = 0.5;
   static final int SOLDIER_PAINT_MIN = 15;
   static final int MOPPER_PAINT_MIN = 50;
   static final int SPLASHER_PAINT_MIN = 50;
@@ -139,28 +144,47 @@ public class Micro {
   record MicroBot(UnitType type, MapLocation startPos, boolean canAttack, boolean canMove, int paint, int hp) {
   }
 
+  static final double[] tyValues = {
+      1,    //      SOLDIER
+      2,    //      SPLASHER
+      1,    //      MOPPER
+      //
+      10,   //      LEVEL_ONE_PAINT_TOWER
+      15,   //      LEVEL_TWO_PAINT_TOWER
+      20,   //      LEVEL_THREE_PAINT_TOWER
+      //
+      10,   //      LEVEL_ONE_MONEY_TOWER
+      15,   //      LEVEL_TWO_MONEY_TOWER
+      20,   //      LEVEL_THREE_MONEY_TOWER
+      //
+      10,   //      LEVEL_ONE_DEFENSE_TOWER
+      15,   //      LEVEL_TWO_DEFENSE_TOWER
+      20,   //      LEVEL_THREE_DEFENSE_TOWER
+  };
+
   static void processEnemies(MicroLoc[] locs, MicroBot bot) throws GameActionException {
     var targetTowers = bot.type.isRobotType() && bot.type != UnitType.MOPPER;
     var isMopper = bot.type == UnitType.MOPPER;
     var attackDist = bot.type.actionRadiusSquared;
     var damage = bot.type.attackStrength;
     var attack = (damage > 0 || isMopper) && bot.canAttack;
+    var cost = bot.type.attackCost * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
     for (var unit : nearbyEnemies) {
       if (unit.getType().isTowerType() != targetTowers && (bot.type.isTowerType() != unit.getType().isTowerType() || unit.type != UnitType.MOPPER))
         continue;
       for (var loc : locs) {
         if (attack && unit.getType().isTowerType() == targetTowers && unit.location.isWithinDistanceSquared(loc.loc, attackDist)) {
-          var score = (double) Math.min(damage, unit.health);
+          rc.setIndicatorDot(unit.location, 255, 0, 255);
+          var score = (double) Math.min(damage, unit.health) * ((1 - (double) unit.health / unit.type.health) + HP_FIXED_VALUE) * HP_TOTAL_VALUE;
           if (damage >= unit.health) score += KILL_VALUE;
+          //score *= tyValues[unit.type.ordinal()];
           if (isMopper) {
-            var paint = Math.min(10, unit.paintAmount);
+            var paint = Math.min(10, unit.paintAmount) * (1 - (double) unit.paintAmount / unit.type.paintCapacity);
             if (rc.senseMapInfo(unit.location).getPaint().isEnemy()) paint += 1;
             // TODO verify that this is true (5 paint to our team regardless of amount of paint stolen) (a dev said they think this is how it works)
-            score = (paint + Math.min(5, bot.type.paintCapacity - bot.paint)) * FREE_PAINT_VALUE;
-          } else if (unit.type == UnitType.SOLDIER && rc.senseMapInfo(unit.location).getPaint() == PaintType.EMPTY) {
-            score += MAP_PAINT_VALUE;
+            score = (paint + Math.min(5, bot.type.paintCapacity - bot.paint) * (1 - (double) bot.paint / bot.type.paintCapacity) + HP_TOTAL_VALUE) * FREE_PAINT_VALUE;
           }
-          score -= bot.type.attackCost * FREE_PAINT_VALUE;
+          score -= cost;
           if (score > loc.attackScore) {
             loc.attackScore = score;
             loc.attackTarget = unit.location;
@@ -168,46 +192,67 @@ public class Micro {
         }
         if ((bot.type.isTowerType() != unit.getType().isTowerType() || unit.type == UnitType.MOPPER)
             && ((unit.type.attackStrength > 0 || unit.type == UnitType.MOPPER) && unit.location.isWithinDistanceSquared(loc.loc, unit.type.actionRadiusSquared))) {
-          loc.incomingDamage += unit.type == UnitType.MOPPER ? Math.min(10, bot.paint) + 5 : Math.min(bot.hp, unit.type.attackStrength);
+          loc.incomingDamage += unit.type == UnitType.MOPPER ? (Math.min(10, bot.paint) + 5) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE : (double) Math.min(bot.hp, unit.type.attackStrength) * ((1 - (double) bot.hp / bot.type.health) + HP_FIXED_VALUE) * HP_TOTAL_VALUE;
+          ;
         }
       }
     }
   }
 
   static void processTiles(MicroLoc[] locs, MicroBot bot) throws GameActionException {
+    if (!bot.canAttack) return;
     // for soldiers: normal action radius 9, adjusted for movement is 18
     // for moppers: 2 / 8
     var tiles = map.tiles;
     if (bot.type == UnitType.SOLDIER) {
+      if (bot.paint < minPaint() + UnitType.SOLDIER.attackCost) return;
+      var mscore = 0.0;
+      var cost = bot.type.attackCost * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+
       for (var tile : rc.senseNearbyMapInfos(bot.startPos, 18)) {
+        if (!tile.isPassable()) continue;
         var p = tile.getPaint();
         var v = 0.0;
         if (p.isEnemy()) continue;
 
-        var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
-        if (p == PaintType.EMPTY) v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
-        else {
-          var s = mtile.ruin != null ? mtile.ruin.secondary(tile.getMapLocation())
-              : map.resourcePattern[tile.getMapLocation().x % 4][tile.getMapLocation().y % 4];
-          if (s != p.isSecondary()) v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+//        var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
+//        if (p == PaintType.EMPTY) v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+//        else {
+//          var s = mtile != null && mtile.ruin != null ? mtile.ruin.secondary(tile.getMapLocation())
+//              : map.resourcePattern[tile.getMapLocation().x % 4][tile.getMapLocation().y % 4];
+//          if (s != p.isSecondary()) v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+//        }
+        if (map.ruinTarget != null && map.ruinTarget.center.isWithinDistanceSquared(tile.getMapLocation(), 8)) {
+          if (p == PaintType.EMPTY || p.isSecondary() != map.tile(tile.getMapLocation()).secondary())
+            v = 2 * MAP_PAINT_VALUE;
+        } else if (closestResource != null && closestResource.isWithinDistanceSquared(tile.getMapLocation(), 8)) {
+          if (p == PaintType.EMPTY || p.isSecondary() != map.tile(tile.getMapLocation()).secondary())
+            v = 1.5 * MAP_PAINT_VALUE;
+        } else if (p == PaintType.EMPTY) {
+          v = MAP_PAINT_VALUE;
         }
+        v -= cost;
 
-        if (v != 0.0) {
+        if (v > mscore) {
+          mscore = 1000.0;
           for (var loc : locs) {
             if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 9)) {
               loc.attackScore = v;
               loc.attackTarget = tile.getMapLocation();
             }
+            if (loc.attackScore < mscore) mscore = loc.attackScore;
           }
         }
       }
+
     } else if (bot.type == UnitType.MOPPER) {
       for (var tile : rc.senseNearbyMapInfos(bot.startPos, 8)) {
+        if (!tile.isPassable()) continue;
         var p = tile.getPaint();
         if (!p.isEnemy()) continue;
 
         var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
-        var v = mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+        var v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
 
         for (var loc : locs) {
           if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 2)) {
@@ -223,10 +268,10 @@ public class Micro {
     var mopReady = bot.canAttack && bot.type == UnitType.MOPPER && bot.paint > 60;
     for (var unit : rc.senseNearbyRobots(bot.startPos, 8, rc.getTeam())) {
       for (var loc : locs) {
-        if (unit.type.isRobotType() && unit.location.isWithinDistanceSquared(loc.loc, 2)) {
-          if (mopReady && unit.type != UnitType.MOPPER && unit.paintAmount < unit.type.paintCapacity) {
+        if (unit.location.isWithinDistanceSquared(loc.loc, 2)) {
+          if (mopReady && unit.type.isRobotType() && unit.type != UnitType.MOPPER && unit.paintAmount < unit.type.paintCapacity) {
             mopReady = false;
-          } else {
+          } else if (unit.type.isRobotType() || bot.paint >= minPaint() + 50 || unit.paintAmount < 50) {
             loc.adjacentAllies += 1;
           }
         }
@@ -234,6 +279,7 @@ public class Micro {
     }
 
     processEnemies(locs, bot);
+    processTiles(locs, bot);
     if (bot.type == UnitType.SPLASHER && bot.canAttack) {
       var startBt = Clock.getBytecodeNum();
       var startTurn = rc.getRoundNum();
@@ -256,10 +302,28 @@ public class Micro {
   static int rlCounter;
 
   static MicroLoc findBestLoc(MicroBot bot, boolean includeCenter) throws GameActionException {
-    var locs = bot.canMove && bot.type.isRobotType() ? Arrays.stream(rc.senseNearbyMapInfos(bot.startPos, 2))
-        .filter(x -> x.isPassable() && ((x.getMapLocation().equals(bot.startPos) && includeCenter) || !rc.canSenseRobotAtLocation(x.getMapLocation())))
-        .map(x -> new MicroLoc(x.getMapLocation()))
-        .toArray(n -> new MicroLoc[n]) : new MicroLoc[]{new MicroLoc(bot.startPos)};
+    var locs = new MicroLoc[]{new MicroLoc(bot.startPos)};
+    if (bot.canMove && bot.type.isRobotType()) {
+      var locs_ = new MicroLoc[9];
+      var nlocs = 0;
+      var dirs = Direction.allDirections();
+      for (int i = 0; i < 9; i++) {
+        var dir = dirs[i];
+        if (!includeCenter && dir == Direction.CENTER) continue;
+        var l = bot.startPos.add(dir);
+        if (dir == Direction.CENTER || (rc.canSenseLocation(l) && rc.senseMapInfo(l).isPassable() && !rc.canSenseRobotAtLocation(l))) {
+          locs_[i] = new MicroLoc(l);
+          nlocs += 1;
+        }
+      }
+      locs = new MicroLoc[nlocs];
+      int j = 0;
+      for (int i = 0; i < 9; i++) {
+        if (locs_[i] != null) {
+          locs[j++] = locs_[i];
+        }
+      }
+    }
     bfAttack = Clock.getBytecodeNum();
     processAttacks(locs, bot);
     bfTarget = Clock.getBytecodeNum();
@@ -292,7 +356,6 @@ public class Micro {
     var defenseMult = ((double) nearbyEnemies.length + 1) / totalNearby * 0.4 + 0.8;
     for (var loc : locs) {
       var score = loc.attackScore * attackMult - loc.incomingDamage * defenseMult;
-      score -= loc.adjacentAllies * FREE_PAINT_VALUE * 2; // both robots lose paint
 //      for (var i = 0; i < rtargets.length; i++) {
 //        var target = rtargets[i];//.fun().get();
 //        //if (target.isEmpty()) continue;
@@ -305,8 +368,11 @@ public class Micro {
         score -= (rlCounter + 1) * 0.2;
       }
       var paint = rc.senseMapInfo(loc.loc).getPaint();
-      if (paint.isEnemy()) score -= 2 * pmul * FREE_PAINT_VALUE;
-      else if (paint == PaintType.EMPTY) score -= pmul * FREE_PAINT_VALUE;
+      if (paint.isEnemy())
+        score -= 2 * pmul * FREE_PAINT_VALUE * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE);
+      else if (paint == PaintType.EMPTY)
+        score -= pmul * FREE_PAINT_VALUE * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE);
+      score -= (paint.isEnemy() ? 2 : 1) * loc.adjacentAllies * FREE_PAINT_VALUE * 2 * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE); // both robots lose paint
       loc.score = score;
       if (best == null || loc.score > best.score) best = loc;
     }
@@ -335,16 +401,18 @@ public class Micro {
     }
     // always do this
     if (rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY && rc.getType() == UnitType.SOLDIER) {
-      rc.attack(rc.getLocation());
+      var s = map.tile(rc.getLocation()).secondary();
+      rc.attack(rc.getLocation(), s);
     } else if (loc.attackScore > 0.0) {
       //rc.setIndicatorString("" + loc.attackScore + ": " + loc.attackTarget);
       rc.setIndicatorDot(loc.attackTarget, 0, 0, 0);
-      rc.attack(loc.attackTarget);
+      var s = map.tile(loc.attackTarget).secondary();
+      rc.attack(loc.attackTarget, s);
       recentLocs.clear();
     }
     var end = Clock.getBytecodeNum();
     rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
-    rc.setIndicatorString("rlcounter: " + rlCounter);
+    //rc.setIndicatorString("rlcounter: " + rlCounter);
   }
 }
 

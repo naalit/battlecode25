@@ -3,6 +3,7 @@
 package immanentize;
 
 import battlecode.common.*;
+
 import static immanentize.Micro.*;
 import static immanentize.RobotPlayer.*;
 
@@ -1434,6 +1435,66 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[6][4] += 2 * MAP_PAINT_VALUE;
         }
+      }
+    }
+
+
+    for (var unit : nearbyEnemies) {
+      if (unit.type.isRobotType()) continue;
+      var d = (double) Math.min(UnitType.SPLASHER.aoeAttackStrength, unit.health) / unit.type.health;
+      var x = unit.location.x - center.x;
+      var y = unit.location.y - center.y;
+      int ax, ay;
+      ax = x + 2;
+      if (ax * ax + y * y <= 10) {
+        locs[ax + 3][y + 3] += d;
+      }
+      ax = x + 1;
+      ay = y + -1;
+      if (ax * ax + ay * ay <= 10) {
+        locs[ax + 3][ay + 3] += d;
+      }
+      if (ax * ax + y * y <= 10) {
+        locs[ax + 3][y + 3] += d;
+      }
+      ay = y + 1;
+      if (ax * ax + ay * ay <= 10) {
+        locs[ax + 3][ay + 3] += d;
+      }
+      ay = y + -2;
+      if (x * x + ay * ay <= 10) {
+        locs[x + 3][ay + 3] += d;
+      }
+      ay = y + -1;
+      if (x * x + ay * ay <= 10) {
+        locs[x + 3][ay + 3] += d;
+      }
+      if (x * x + y * y <= 10) {
+        locs[x + 3][y + 3] += d;
+      }
+      ay = y + 1;
+      if (x * x + ay * ay <= 10) {
+        locs[x + 3][ay + 3] += d;
+      }
+      ay = y + 2;
+      if (x * x + ay * ay <= 10) {
+        locs[x + 3][ay + 3] += d;
+      }
+      ax = x + -1;
+      ay = y + -1;
+      if (ax * ax + ay * ay <= 10) {
+        locs[ax + 3][ay + 3] += d;
+      }
+      if (ax * ax + y * y <= 10) {
+        locs[ax + 3][y + 3] += d;
+      }
+      ay = y + 1;
+      if (ax * ax + ay * ay <= 10) {
+        locs[ax + 3][ay + 3] += d;
+      }
+      ax = x + -2;
+      if (ax * ax + y * y <= 10) {
+        locs[ax + 3][y + 3] += d;
       }
     }
 

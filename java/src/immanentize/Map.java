@@ -22,15 +22,18 @@ public class Map {
       center = loc;
     }
 
-    public UnitType type() {
+    public UnitType type() throws GameActionException {
       var type = (hash(center) % 2) == 0 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
       if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
       type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
       // then paint tower
       type = rc.getNumberTowers() == 3 ? UnitType.LEVEL_ONE_PAINT_TOWER : type;
-      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 3 && (hash(center) % 5) == 0)
+//      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 3 && (hash(center) % 5) == 0)
+//        type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
+      if (rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
+      }
       return type;
     }
 
@@ -48,10 +51,10 @@ public class Map {
         if (tiles[loc.getMapLocation().x][loc.getMapLocation().y].paintTeam != p) {
           var old = tile(loc.getMapLocation()).paintTeam;
 
-          if (old == rc.getTeam()) allyTiles -= 1;
-          else if (old == rc.getTeam().opponent()) enemyTiles -= 1;
-          if (p == rc.getTeam()) allyTiles += 1;
-          else if (p == rc.getTeam().opponent()) enemyTiles += 1;
+          if (old == us) allyTiles -= 1;
+          else if (old == them) enemyTiles -= 1;
+          if (p == us) allyTiles += 1;
+          else if (p == them) enemyTiles += 1;
 
           tile(loc.getMapLocation()).paintTeam = p;
         }
@@ -234,9 +237,10 @@ public class Map {
       ruin.roundSeen = rc.getRoundNum();
       ruin.update();
       if (ruin.allyTiles == 24) {
-        if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc)) {
+        if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && rc.canMark(ruinLoc.add(Direction.NORTH))) {
           rc.completeTowerPattern(ruin.type(), ruinLoc);
           rc.setTimelineMarker("Tower built", 0, 255, 0);
+          rc.mark(ruinLoc.add(Direction.NORTH), rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly());
         }
       }
     }

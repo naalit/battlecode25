@@ -56,7 +56,32 @@ for i in range(-4, 5):
         print( "        }")
         print( "      }")
 
-        print( "    }");
+        print( "    }")
+
+print("\n")
+# now attacks
+print("    for (var unit : nearbyEnemies) {")
+print("      if (unit.type.isRobotType()) continue;")
+print("      var d = (double) Math.min(UnitType.SPLASHER.aoeAttackStrength, unit.health) / unit.type.health;")
+print("      var x = unit.location.x - center.x;")
+print("      var y = unit.location.y - center.y;")
+print("      int ax, ay;")
+prevx = -5
+for i in range(len(offx)):
+    px, py = "ax", "ay"
+    if offx[i] == 0:
+        px = "x"
+    elif prevx != offx[i]:
+        print(f"      ax = x + {offx[i]};")
+        prevx = offx[i]
+    if offy[i] == 0:
+        py = "y"
+    else:
+        print(f"      ay = y + {offy[i]};")
+    print(f"      if ({px}*{px} + {py}*{py} <= 10) {{")
+    print(f"        locs[{px}+3][{py}+3] += d;")
+    print( "      }")
+print("    }")
 
 print("\n")
 # now collect the best target for each move location
