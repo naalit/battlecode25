@@ -12,10 +12,10 @@ import concurrent.futures
 
 TEAM1 = "immanentize"
 TEAM2 = "immanentize_check2"
-WITH_REVERSE = False
+WITH_REVERSE = True
 SAVE_LOCATION = "./trial_logs/"
-COMMAND = "gradlew"
-#COMMAND = "./gradlew"
+#COMMAND = "gradlew"
+COMMAND = "./gradlew"
 MAX_WORKERS = 4
 
 # when run mapnames() replace between example and closing bracket
@@ -51,11 +51,9 @@ def runmaps():
     timestamp = time_ns()
     shortname = f"{TEAM1}_{TEAM2}_{timestamp}"
     subfolder = f"{SAVE_LOCATION}{shortname}"
-    os.system(f"mkdir \"{subfolder}\"")
+    os.system(f"mkdir -p \"{subfolder}\"")
 
     summary = runmatch(TEAM1, TEAM2, subfolder) + "\n"
-    if WITH_REVERSE:
-        summary += runmatch(TEAM2, TEAM1, subfolder)
     with open(f"{SAVE_LOCATION}{shortname}.txt", "w") as file:
         file.write(asctime()+"\n")
         file.write(summary)
@@ -70,6 +68,8 @@ def runmatch(team1, team2, subfolder):
     with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS) as ex:
         ct = len(MAPS_TO_RUN)
         results = [ex.submit(runsingle, (team1, team2, map_name, subfolder)) for map_name in MAPS_TO_RUN]
+        if WITH_REVERSE:
+            results += [ex.submit(runsingle, (team2, team1, map_name, subfolder)) for map_name in MAPS_TO_RUN]
 
         for future in concurrent.futures.as_completed(results):
             t1, t2, b = future.result()
@@ -88,7 +88,7 @@ def runmatch(team1, team2, subfolder):
 def runsingle(arg):
     team1, team2, map_name, subfolder = arg
     print(f"START {team1} vs. {team2} on {map_name}")
-    arg = f"gradlew run -Pmaps=\"{map_name}\" -PteamA=\"{team1}\" -PteamB=\"{team2}\""
+    arg = f"{COMMAND} run -Pmaps=\"{map_name}\" -PteamA=\"{team1}\" -PteamB=\"{team2}\""
 
     try:
         output = os.popen(arg).read()

@@ -383,8 +383,8 @@ public class RobotPlayer {
               }
             }
 
-            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150) {
-              rc.mark(rc.getLocation().add(Direction.NORTH), false);
+            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150
+                && !rc.senseMapInfo(rc.getLocation().add(Direction.NORTH)).getMark().isSecondary()) {
               rc.disintegrate();
             }
           }

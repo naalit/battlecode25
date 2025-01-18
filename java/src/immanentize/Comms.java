@@ -10,6 +10,7 @@ public class Comms {
     public enum Type {
       Ruin,
       Tower,
+      RemoveWatchtower,
     }
 
     public Type type;
@@ -29,7 +30,7 @@ public class Comms {
     }
 
     Message(int encoded) {
-      type = Type.values()[encoded >> 30];
+      type = Type.values()[encoded >> 29];
       round = (encoded >> 12) & (2048 - 1);
       loc = new MapLocation((encoded >> 6) & 0b11_1111, encoded & 0b11_1111);
       towerType = (encoded & (1 << 24)) > 0 ? UnitType.LEVEL_ONE_MONEY_TOWER
@@ -39,7 +40,7 @@ public class Comms {
 
     int encode() {
       var i = 0;
-      i |= type.ordinal() << 30;
+      i |= type.ordinal() << 29;
       i |= round << 12;
       i |= loc.x << 6 | loc.y;
       if (towerType == UnitType.LEVEL_ONE_MONEY_TOWER) i |= 1 << 24;
@@ -61,6 +62,11 @@ public class Comms {
         }
         case Tower -> {
           map.tryAddTower(m.loc, m.team, m.towerType, m.round);
+        }
+        case RemoveWatchtower -> {
+          if (rc.canMark(m.loc.add(Direction.NORTH))) {
+            rc.mark(m.loc.add(Direction.NORTH), false);
+          }
         }
       }
     }
@@ -86,6 +92,11 @@ public class Comms {
             m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);
             m.towerType = tower.type;
             m.team = tower.team;
+          }
+          if (i == (mstart + 1) % mlength && (rc.getType().isTowerType() && /*rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER &&*/ RobotPlayer.turnsSinceSeenEnemy > 150)) {
+            m.type = Message.Type.RemoveWatchtower;
+            m.loc = rc.getLocation();
+            rc.setIndicatorLine(rc.getLocation(), rc.getLocation().add(Direction.NORTH), 255, 0, 0);
           }
           rc.sendMessage(unit.location, m.encode());
           sent += 1;

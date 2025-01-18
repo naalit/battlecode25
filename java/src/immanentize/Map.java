@@ -240,7 +240,7 @@ public class Map {
         if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && rc.canMark(ruinLoc.add(Direction.NORTH))) {
           rc.completeTowerPattern(ruin.type(), ruinLoc);
           rc.setTimelineMarker("Tower built", 0, 255, 0);
-          rc.mark(ruinLoc.add(Direction.NORTH), rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly());
+          rc.mark(ruinLoc.add(Direction.NORTH), /*rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly()*/ true);
         }
       }
     }
