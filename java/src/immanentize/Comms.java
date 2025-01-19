@@ -64,8 +64,8 @@ public class Comms {
           map.tryAddTower(m.loc, m.team, m.towerType, m.round);
         }
         case RemoveWatchtower -> {
-          if (rc.canMark(m.loc.add(Direction.NORTH))) {
-            rc.mark(m.loc.add(Direction.NORTH), false);
+          if (rc.canRemoveMark(m.loc.add(Direction.NORTH))) {
+            rc.removeMark(m.loc.add(Direction.NORTH));
           }
         }
       }

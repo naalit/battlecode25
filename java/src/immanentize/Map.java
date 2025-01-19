@@ -17,13 +17,17 @@ public class Map {
     public int allyTiles;
     public int enemyTiles;
     public int roundSeen;
+    public UnitType type;
+    public int typeRound;
 
     public Ruin(MapLocation loc) {
       center = loc;
     }
 
     public UnitType type() throws GameActionException {
-      var type = (hash(center) % 2) == 0 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      if (typeRound == rc.getRoundNum()) return type;
+      typeRound = rc.getRoundNum();
+      type = (hash(center) % 2) == 0 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
       if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
       type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
@@ -38,7 +42,8 @@ public class Map {
     }
 
     public boolean secondary(MapLocation loc) throws GameActionException {
-      return rc.getTowerPattern(type())[loc.y - (center.y - 2)][loc.x - (center.x - 2)];
+      if (typeRound != rc.getRoundNum()) type();
+      return rc.getTowerPattern(type)[loc.y - (center.y - 2)][loc.x - (center.x - 2)];
     }
 
     public void update() throws GameActionException {
@@ -75,6 +80,35 @@ public class Map {
     }
   }
 
+  public class ResourcePattern {
+    public MapLocation center;
+    public boolean completed = false;
+
+    public ResourcePattern(MapLocation loc) {
+      center = loc;
+    }
+
+    public boolean secondary(MapLocation loc) {
+      var corner = center.translate(-2, -2);
+      return resourcePattern[loc.y - corner.y][loc.x - corner.x];
+    }
+
+    public void update() throws GameActionException {
+      if (!completed && rc.canSenseLocation(center) && rc.senseMapInfo(center).isResourcePatternCenter()) {
+        completed = true;
+      } else if (!completed && rc.canSenseLocation(center) && rc.senseMapInfo(center).getMark() != PaintType.ALLY_PRIMARY) {
+        // if somebody removed the mark it was bc this rp didnt work anymore
+        if (closestRP == this) closestRP = null;
+        removeRP(this);
+      } else if (!completed && rc.getLocation().isWithinDistanceSquared(center, 8)) {
+        if (rc.canCompleteResourcePattern(center)) {
+          rc.completeResourcePattern(center);
+          completed = true;
+        }
+      }
+    }
+  }
+
   public class Tile {
     public Tower tower;
     public MapLocation loc;
@@ -82,6 +116,7 @@ public class Map {
     public boolean canBeRP = true;
     public int nextRPCheck;
     public Team paintTeam;
+    public ResourcePattern rp;
 
     public Tile(MapLocation loc) {
       tower = null;
@@ -94,31 +129,9 @@ public class Map {
 
     public boolean secondary() throws GameActionException {
       if (ruin != null) return ruin.secondary(loc);
+      if (rp != null) return rp.secondary(loc);
 
-      return resourcePattern[loc.x % 4][loc.y % 4];
-    }
-
-    public boolean rpCompatible() throws GameActionException {
-      if (ruin == null) return true;
-      var s = resourcePattern[loc.x % 4][loc.y % 4];
-      return ruin.secondary(loc) == s;
-    }
-
-    public void checkRP() throws GameActionException {
-      nextRPCheck = rc.getRoundNum() + 10;
-      for (var tile : rc.senseNearbyMapInfos(loc, 8)) {
-        // this should be exactly the correct tiles (bc 0,3 has r^2 9)
-        if (!tile.isPassable()) {
-          canBeRP = false;
-          nextRPCheck = 5000;
-          break;
-        }
-        if (tile.getPaint().isEnemy() || !map.tile(tile.getMapLocation()).rpCompatible()) {
-          canBeRP = false;
-          nextRPCheck = rc.getRoundNum() + 10;
-          break;
-        }
-      }
+      return false;
     }
   }
 
@@ -129,42 +142,11 @@ public class Map {
   public final boolean[][] resourcePattern;
   public ArrayList<Ruin> ruins = new ArrayList<>();
   public ArrayList<Tower> towers = new ArrayList<>();
+  public ArrayList<ResourcePattern> rps = new ArrayList<>();
   public Ruin ruinTarget;
   public Tower closestPaintTower;
   public Tower closestEnemyTower;
-
-  public MapLocation findRPCenter(MapLocation loc) throws GameActionException {
-    var cx = loc.x / 4;
-    var cy = loc.y / 4;
-    //RobotPlayer.rc.setIndicatorString("c " + cx + ", " + cy);
-    MapLocation best = null;
-    var bestDist = 0;
-    // not exact closest, so look one cell in each direction for the closest center
-    var checked = 0;
-    for (int i = -1; i <= 1; i++) {
-      for (int j = -1; j <= 1; j++) {
-        var c = new MapLocation(4 * (cx + i) + 2, 4 * (cy + j) + 2);
-        if (c.x < 2 || c.y < 2 || c.x > width - 3 || c.y > height - 3) continue;
-        var t = tile(c);
-        if (rc.canSenseLocation(c) && rc.senseMapInfo(c).isResourcePatternCenter()) {
-          t.canBeRP = false;
-          t.nextRPCheck = rc.getRoundNum() + 25;
-        }
-        if (checked < 4 && t.nextRPCheck < rc.getRoundNum()) {
-          t.checkRP();
-          checked += 1;
-        }
-        if (t.canBeRP) {
-          var d = loc.distanceSquaredTo(c);
-          if (best == null || d < bestDist) {
-            bestDist = d;
-            best = c;
-          }
-        }
-      }
-    }
-    return best;
-  }
+  public ResourcePattern closestRP;
 
   public Map() {
     height = rc.getMapHeight();
@@ -183,6 +165,28 @@ public class Map {
     return tiles[loc.x][loc.y];
   }
 
+  public ResourcePattern tryAddRP(MapLocation center) {
+    if (tile(center).rp == null) {
+      var r = new ResourcePattern(center);
+      rps.add(r);
+      for (int x = -2; x < 3; x++) {
+        for (int y = -2; y < 3; y++) {
+          tile(center.translate(x, y)).rp = r;
+        }
+      }
+    }
+    return tile(center).rp;
+  }
+
+  private void removeRP(ResourcePattern rp) {
+    rps.remove(rp);
+    for (int x = -2; x < 3; x++) {
+      for (int y = -2; y < 3; y++) {
+        tile(rp.center.translate(x, y)).rp = null;
+      }
+    }
+  }
+
   public Ruin tryAddRuin(MapLocation ruin, int roundSeen) {
     if (tile(ruin).tower != null && tile(ruin).tower.roundSeen > roundSeen) return null;
     if (!tile(ruin).isInRuin()) {
@@ -190,7 +194,11 @@ public class Map {
       ruins.add(r);
       for (int x = -2; x < 3; x++) {
         for (int y = -2; y < 3; y++) {
-          tile(ruin.translate(x, y)).ruin = r;
+          var t = tile(ruin.translate(x, y));
+          t.ruin = r;
+          // RP centers can never be within sqrt(8) of a tower
+          t.canBeRP = false;
+          t.nextRPCheck = 2500;
         }
       }
       if (tile(ruin).tower != null) towers.remove(tile(ruin).tower);
@@ -234,7 +242,6 @@ public class Map {
     for (var ruinLoc : rc.senseNearbyRuins(-1)) {
       if (rc.canSenseRobotAtLocation(ruinLoc)) continue;
       var ruin = tryAddRuin(ruinLoc, rc.getRoundNum());
-      ruin.roundSeen = rc.getRoundNum();
       ruin.update();
       if (ruin.allyTiles == 24) {
         if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && rc.canMark(ruinLoc.add(Direction.NORTH))) {
@@ -279,6 +286,107 @@ public class Map {
       if (tower.team == rc.getTeam().opponent()) {
         if (closestEnemyTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestEnemyTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestEnemyTower = tower;
+        }
+      }
+    }
+
+    if (rc.getType() == UnitType.SOLDIER) {
+      closestRP = null;
+      if (tile(rc.getLocation()).rp != null && !tile(rc.getLocation()).rp.completed) {
+        closestRP = tile(rc.getLocation()).rp;
+      } else {
+        for (var rp : rps) {
+          if (!rp.completed && (closestRP == null || rp.center.isWithinDistanceSquared(rc.getLocation(), closestRP.center.distanceSquaredTo(rc.getLocation())))) {
+            closestRP = rp;
+          }
+        }
+      }
+      if (closestRP != null) {
+        closestRP.update();
+      }
+      if (closestRP != null) {
+        rc.setIndicatorDot(closestRP.center, 0, 0, 255);
+        for (var l : rc.senseNearbyMapInfos()) {
+          if (l.getMark() == PaintType.ALLY_PRIMARY && tile(l.getMapLocation()).rp == null) {
+            var rp = tryAddRP(l.getMapLocation());
+            rp.update();
+          }
+        }
+        if (closestRP.center.isWithinDistanceSquared(rc.getLocation(), 2)) {
+          // Re-check for overlap
+          var keep = true;
+          a:
+          for (int x = -2; x < 3; x++) {
+            for (int y = -2; y < 3; y++) {
+              var l2 = closestRP.center.translate(x, y);
+              var t2 = tile(l2);
+              if ((t2.rp != null || t2.ruin != null) && t2.secondary() != resourcePattern[y + 2][x + 2]) {
+                keep = false;
+                rc.setIndicatorDot(t2.loc, 255, 0, 0);
+                break a;
+              }
+            }
+          }
+          if (!keep) {
+            if (rc.canRemoveMark(closestRP.center)) {
+              rc.removeMark(closestRP.center);
+            }
+            removeRP(closestRP);
+            closestRP = null;
+          }
+        }
+      } else {
+        // Try to find a new RP position
+        for (var l : rc.senseNearbyMapInfos()) {
+          if (l.getMark() == PaintType.ALLY_PRIMARY && tile(l.getMapLocation()).rp == null) {
+            var rp = tryAddRP(l.getMapLocation());
+            rp.update();
+            if (!rp.completed) {
+              closestRP = rp;
+              break;
+            }
+          }
+        }
+        if (closestRP == null) {
+          a:
+          for (var l : rc.senseNearbyMapInfos(2)) {
+            var t = tile(l.getMapLocation());
+            if (t.canBeRP || t.nextRPCheck < rc.getRoundNum()) {
+              for (int x = -2; x < 3; x++) {
+                for (int y = -2; y < 3; y++) {
+                  var l2 = l.getMapLocation().translate(x, y);
+                  if (!rc.onTheMap(l2)) {
+                    t.canBeRP = false;
+                    t.nextRPCheck = 2500;
+                    continue a;
+                  }
+                  // can always sense location
+                  var m = rc.senseMapInfo(l2);
+                  // if there's another center within the radius the tiling def doesn't work
+                  if (m.hasRuin() || !m.isPassable() || m.getMark().isAlly()) {
+                    t.canBeRP = false;
+                    t.nextRPCheck = 2500;
+                    continue a;
+                  }
+                  if (m.getPaint().isEnemy()) {
+                    t.canBeRP = false;
+                    t.nextRPCheck = rc.getRoundNum() + 10;
+                    continue a;
+                  }
+                  var t2 = tile(l2);
+                  if ((t2.rp != null || t2.ruin != null) && t2.secondary() != resourcePattern[y + 2][x + 2]) {
+                    t.canBeRP = false;
+                    // if there's already a RP there blocking this one then we don't want to ever put this one here
+                    t.nextRPCheck = t2.rp == null ? rc.getRoundNum() + 10 : 2500;
+                    continue a;
+                  }
+                }
+              }
+              // At this point t is a valid RP location
+              closestRP = tryAddRP(t.loc);
+              rc.mark(t.loc, false);
+            }
+          }
         }
       }
     }

@@ -51,7 +51,9 @@ public class Micro {
               .filter(x -> x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity)
               .min(Comparator.comparingInt(x -> x.paintAmount))
               .map(x -> x.location))),
-      new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && (!doTowers() || map.ruinTarget == null) && rc.getLocation().isWithinDistanceSquared(x, 8))),
+      new TargetType(() -> Optional.ofNullable(map.closestRP)
+          .filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && (!doTowers() || map.ruinTarget == null) && rc.getLocation().isWithinDistanceSquared(x.center, 8))
+          .map(l -> l.center)),
       // Soldier: target mark location
       //new TargetType(() -> Optional.ofNullable(map.ruinTarget).map(x -> x.center.translate(0, 1)).filter(x -> rc.getType() == UnitType.SOLDIER && rc.getID() % 3 != 0 && rc.getPaint() >= minPaint() + rc.getType().attackCost && !map.tile(x).isInRuin())),
       // Soldier: target unpainted tower squares
@@ -76,27 +78,10 @@ public class Micro {
         var dy = rc.getLocation().y == r.center.y ? (rc.getLocation().x > r.center.x ? -1 : 1) : 0;
         return r.center.translate(dx, dy);
       })),
-//      new TargetType(() -> Optional.ofNullable(map.ruinTarget).filter(x -> doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost).flatMap(ruin -> {
-//        Optional<MapLocation> target = Optional.empty();
-//        try {
-//          a:
-//          for (int x = -2; x < 3; x++) {
-//            for (int y = -2; y < 3; y++) {
-//              var loc = ruin.center.translate(x, y);
-//              if ((x == 0 && y == 0) || !rc.canSenseLocation(loc)) continue;
-//              if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != map.tile(loc).secondary()) {
-//                target = Optional.of(loc);
-//                break a;
-//              }
-//            }
-//          }
-//        } catch (GameActionException e) {
-//          throw new RuntimeException(e);
-//        }
-//        return target;
-//      })),
       // Soldier: target nearly-full resource pattern
-      new TargetType(() -> Optional.ofNullable(closestResource).filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && (!doTowers() || map.ruinTarget == null))),
+      new TargetType(() -> Optional.ofNullable(map.closestRP)
+          .filter(x -> rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost) && (!doTowers() || map.ruinTarget == null))
+          .map(l -> l.center)),
       // || closestResourceSquaresLeft == 0))),// && closestResourceSquaresLeft < 12)),
       // Soldier: target ruins
       new TargetType(() -> Optional.ofNullable(map.ruinTarget)
@@ -127,6 +112,83 @@ public class Micro {
       ),
   };
 
+  static MapLocation pickTarget(MicroBot bot) throws GameActionException {
+    // Paint resupply - URGENT
+    if (map.closestPaintTower != null && bot.paint < minPaint() + bot.type.attackCost)
+      return map.closestPaintTower.loc;
+    // Mopper: find nearby soldier
+    if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= minPaint() + 10) {
+      RobotInfo best = null;
+      for (var x : nearbyAllies) {
+        if (x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity) {
+          if (best == null || x.paintAmount < best.paintAmount) {
+            best = x;
+          }
+        }
+      }
+      if (best != null) {
+        return best.location;
+      }
+    }
+    if (map.closestRP != null && rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost)
+        && (!doTowers() || map.ruinTarget == null) && rc.getLocation().isWithinDistanceSquared(map.closestRP.center, 8)) {
+      return map.closestRP.center;
+    }
+    // Soldier: target unpainted tower squares
+    if (map.ruinTarget != null && doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost) {
+      MapLocation[] corners = {map.ruinTarget.center.translate(-2, -2), map.ruinTarget.center.translate(2, -2), map.ruinTarget.center.translate(-2, 2), map.ruinTarget.center.translate(2, 2)};
+      for (var loc : corners) {
+        if (!rc.canSenseLocation(loc)) continue;
+        if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != map.tile(loc).secondary()) {
+          return loc;
+        }
+      }
+    }
+    if (map.ruinTarget != null && doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getLocation().isWithinDistanceSquared(map.ruinTarget.center, 8)) {
+      var dx = rc.getLocation().x == map.ruinTarget.center.x ? (rc.getLocation().y > map.ruinTarget.center.y ? 1 : -1) : 0;
+      var dy = rc.getLocation().y == map.ruinTarget.center.y ? (rc.getLocation().x > map.ruinTarget.center.x ? -1 : 1) : 0;
+      return map.ruinTarget.center.translate(dx, dy);
+    }
+    // Soldier: target nearly-full resource pattern
+    if (map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null)) {
+      return map.closestRP.center;
+    }
+    // Soldier: target ruins
+    if (map.ruinTarget != null && bot.type == UnitType.SOLDIER
+        && rc.getID() % 3 != 0
+        && bot.paint >= minPaint() + bot.type.attackCost
+        && doTowers()) {
+      return map.ruinTarget.center;
+    }
+    // Soldier(/splasher?): target enemy towers
+    //new TargetType(() -> Optional.ofNullable(map.closestEnemyTower).map(x -> x.loc).filter(x -> rc.getType() != UnitType.MOPPER && rc.getID() % 3 != 0 && rc.getPaint() >= minPaint() + rc.getType().attackCost)),
+    // Mopper/splasher: find enemy paint
+    if (bot.type == UnitType.MOPPER) {
+      // || (rc.getType() == UnitType.SPLASHER && rc.getPaint() >= 100))
+      MapLocation best = null;
+      var bestD = 0;
+      for (var i : rc.senseNearbyMapInfos()) {
+        if (i.getPaint().isEnemy()) {
+          var d = i.getMapLocation().distanceSquaredTo(bot.startPos);
+          if (best == null || d < bestD) {
+            best = i.getMapLocation();
+            bestD = d;
+          }
+        }
+      }
+      if (best != null)
+        return best;
+    }
+    // Paint resupply - if nothing else important to do (for soldiers)
+    if (map.closestPaintTower != null && bot.paint < 50 + rc.getType().attackCost) {
+      return map.closestPaintTower.loc;
+    }
+    // Exploration
+    if (exploreTarget == null || exploreTarget.isWithinDistanceSquared(bot.startPos, 2)) {
+      exploreTarget = new MapLocation(rng() % rc.getMapWidth(), rng() % rc.getMapHeight());
+    }
+    return exploreTarget;
+  }
 
   static class MicroLoc {
     MapLocation loc;
@@ -208,48 +270,45 @@ public class Micro {
       if (bot.paint < minPaint() + UnitType.SOLDIER.attackCost) return;
       var mscore = 0.0;
       var cost = bot.type.attackCost * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+      var ptile = lastTarget == null ? null : bot.startPos.add(bot.startPos.directionTo(lastTarget));
+      var rtarget = map.ruinTarget != null ? map.ruinTarget.center : new MapLocation(70, 70);
+      var rptarget = map.closestRP != null ? map.closestRP.center : new MapLocation(70, 70);
 
       for (var tile : rc.senseNearbyMapInfos(bot.startPos, 18)) {
         if (!tile.isPassable()) continue;
         var p = tile.getPaint();
         var v = 0.0;
         if (p.isEnemy()) continue;
+        var l = tile.getMapLocation();
 
-//        var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
-//        if (p == PaintType.EMPTY) v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
-//        else {
-//          var s = mtile != null && mtile.ruin != null ? mtile.ruin.secondary(tile.getMapLocation())
-//              : map.resourcePattern[tile.getMapLocation().x % 4][tile.getMapLocation().y % 4];
-//          if (s != p.isSecondary()) v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
-//        }
-        if (map.ruinTarget != null && map.ruinTarget.center.isWithinDistanceSquared(tile.getMapLocation(), 8)) {
-          if (p == PaintType.EMPTY || p.isSecondary() != map.tile(tile.getMapLocation()).secondary())
+        if (rtarget.isWithinDistanceSquared(l, 8)) {
+          if (p == PaintType.EMPTY || p.isSecondary() != map.ruinTarget.secondary(l))
             v = 2 * MAP_PAINT_VALUE;
-        } else if (closestResource != null && closestResource.isWithinDistanceSquared(tile.getMapLocation(), 8)) {
-          if (p == PaintType.EMPTY || p.isSecondary() != map.tile(tile.getMapLocation()).secondary())
+        } else if (rptarget.isWithinDistanceSquared(l, 8)) {
+          if (p == PaintType.EMPTY || p.isSecondary() != map.closestRP.secondary(l))
             v = 1.5 * MAP_PAINT_VALUE;
         } else if (p == PaintType.EMPTY) {
           v = MAP_PAINT_VALUE;
+        }
+        if (l.equals(ptile)) {
+          v *= 1.2;
         }
         v -= cost;
 
         if (v > mscore) {
           mscore = 1000.0;
           for (var loc : locs) {
-            if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 9)) {
+            if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(l, 9)) {
               loc.attackScore = v;
-              loc.attackTarget = tile.getMapLocation();
+              loc.attackTarget = l;
             }
             if (loc.attackScore < mscore) mscore = loc.attackScore;
           }
         }
       }
-
     } else if (bot.type == UnitType.MOPPER) {
       for (var tile : rc.senseNearbyMapInfos(bot.startPos, 8)) {
-        if (!tile.isPassable()) continue;
-        var p = tile.getPaint();
-        if (!p.isEnemy()) continue;
+        if (!tile.isPassable() || !tile.getPaint().isEnemy()) continue;
 
         var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
         var v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
@@ -285,7 +344,6 @@ public class Micro {
       var startTurn = rc.getRoundNum();
 
       MicroHelper.processSplasherLocsGenHelper(bot.startPos, locs);
-      //processSplasherAttack(locs, bot);
 
       var endBt = Clock.getBytecodeNum();
       var endTurn = rc.getRoundNum();
@@ -325,29 +383,30 @@ public class Micro {
       }
     }
     bfAttack = Clock.getBytecodeNum();
-    processAttacks(locs, bot);
+    var target = pickTarget(bot);
+//    MapLocation target = null;
+//    if (locs.length > 1) {
+//      for (var r : targets) {
+//        var x = r.fun().get();
+//        if (x.isPresent()) {
+//          target = x.get();
+//          break;
+//        }
+//      }
+//      if (target != null) {
+//        if (!target.equals(lastTarget)) {
+//          recentLocs.clear();
+//          recentLocs.add(bot.startPos);
+//        }
+//        lastTarget = target;
+//        rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
+//      }
+//    }
+    // var target = Arrays.stream(targets).flatMap(x -> x.fun().get().stream()).findFirst();
     bfTarget = Clock.getBytecodeNum();
-    var pmul = bot.type == UnitType.MOPPER ? 2 : 1;
-    MapLocation target = null;
-    if (locs.length > 1) {
-      for (var r : targets) {
-        var x = r.fun().get();
-        if (x.isPresent()) {
-          target = x.get();
-          break;
-        }
-      }
-      if (target != null) {
-        if (!target.equals(lastTarget)) {
-          recentLocs.clear();
-          recentLocs.add(bot.startPos);
-        }
-        lastTarget = target;
-        rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
-      }
-    }
-//    var target = Arrays.stream(targets).flatMap(x -> x.fun().get().stream()).findFirst();
+    processAttacks(locs, bot);
     bfScore = Clock.getBytecodeNum();
+    var pmul = bot.type == UnitType.MOPPER ? 2 : 1;
     MicroLoc best = null;
     var pTargetDist = target != null ? bot.startPos.distanceSquaredTo(target) : 0;
     var totalNearby = nearbyAllies.length + nearbyEnemies.length + 2;
@@ -384,7 +443,7 @@ public class Micro {
     if (rc.getType().isTowerType()) {
       rc.attack(null);
     }
-    var loc = findBestLoc(new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost, rc.isMovementReady(), rc.getPaint(), rc.getHealth()), true);
+    var loc = findBestLoc(new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady(), rc.getPaint(), rc.getHealth()), true);
     if (!loc.loc.equals(rc.getLocation())) {
       if (recentLocs.contains(loc.loc)) rlCounter += 1;
       else rlCounter = 0;
@@ -392,7 +451,9 @@ public class Micro {
       if (recentLocs.size() >= 12) recentLocs.removeFirst();
       recentLocs.addLast(rc.getLocation());
 
-      rc.move(rc.getLocation().directionTo(loc.loc));
+      if (rc.canMove(rc.getLocation().directionTo(loc.loc))) {
+        rc.move(rc.getLocation().directionTo(loc.loc));
+      }
     } else if (rc.isMovementReady()) {
       if (recentLocs.size() >= 12) recentLocs.removeFirst();
       recentLocs.addLast(rc.getLocation());
@@ -400,14 +461,16 @@ public class Micro {
       exploreTarget = null;
     }
     // always do this
-    if (rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY && rc.getType() == UnitType.SOLDIER) {
+    if (rc.getType() == UnitType.SOLDIER && rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY) {
       var s = map.tile(rc.getLocation()).secondary();
       rc.attack(rc.getLocation(), s);
     } else if (loc.attackScore > 0.0) {
       //rc.setIndicatorString("" + loc.attackScore + ": " + loc.attackTarget);
       rc.setIndicatorDot(loc.attackTarget, 0, 0, 0);
       var s = map.tile(loc.attackTarget).secondary();
-      rc.attack(loc.attackTarget, s);
+      if (rc.canAttack(loc.attackTarget)) {
+        rc.attack(loc.attackTarget, s);
+      }
       recentLocs.clear();
     }
     var end = Clock.getBytecodeNum();
