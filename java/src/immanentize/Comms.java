@@ -123,6 +123,8 @@ public class Comms {
         if (midx % mlength == mstart) break;
         sent += 1;
       }
+    } else if (sent == 0) {
+      midx = 0;
     }
   }
 }

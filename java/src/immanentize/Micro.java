@@ -48,7 +48,7 @@ public class Micro {
       return map.closestPaintTower.loc;
 
     // Mopper: find nearby soldier
-    if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= minPaint() + 10) {
+    if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= 60) {
       RobotInfo best = null;
       for (var x : nearbyAllies) {
         if (x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity) {
