@@ -108,11 +108,12 @@ public class RobotPlayer {
         var q = Clock.getBytecodeNum();
         comms.update();
 
-        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && (rc.getRoundNum() < 5 || rc.getID() % 8 < 4)) {
+        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && (rc.getRoundNum() < 5 || rc.getID() % 13 == 0)) {
           Micro.exploreTarget = exploreLocs[(rc.getID() + rc.getRoundNum()) % exploreLocs.length];
         }
-        for (int y = -4; y < 5; y++) {
-          var loc = rc.getLocation().translate(y, 0);
+        // Making sure columns in view are initialized before the turn starts so we can optimize checks to `tiles[x][y]`
+        for (int x = -4; x < 5; x++) {
+          var loc = rc.getLocation().translate(x, 0);
           if (rc.onTheMap(loc)) {
             map.tile(loc);
           }
