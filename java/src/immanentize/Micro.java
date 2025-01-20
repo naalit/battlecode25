@@ -403,6 +403,10 @@ public class Micro {
     var target = pickTarget(bot);
     if (target != null) {
       rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
+      if (!target.equals(lastTarget)) {
+        lastTarget = target;
+        recentLocs.clear();
+      }
     }
     bfTarget = Clock.getBytecodeNum();
     processAttacks(locs, bot);
@@ -414,6 +418,7 @@ public class Micro {
     // 0.9-1.1? we can adjust numbers. they start out at 0-1 so
     var attackMult = ((double) nearbyAllies.length + 1) / totalNearby * 0.4 + 0.8;
     var defenseMult = ((double) nearbyEnemies.length + 1) / totalNearby * 0.4 + 0.8;
+    var tmult = 0.1;//rc.getRoundNum() > 400 ? 0.01 : 0.1;
     for (var loc : locs) {
       var score = loc.attackScore * attackMult - loc.incomingDamage * defenseMult;
 //      for (var i = 0; i < rtargets.length; i++) {
@@ -422,7 +427,7 @@ public class Micro {
 //        score -= target.distanceSquaredTo(loc.loc) * 0.1 * (double) (rtargets.length - i) / rtargets.length;
 //      }
       if (target != null) {
-        score -= (target.distanceSquaredTo(loc.loc) - pTargetDist) * 0.003;// * (double) (rtargets.length - i) / rtargets.length;
+        score -= (target.distanceSquaredTo(loc.loc) - pTargetDist) * tmult;// * (double) (rtargets.length - i) / rtargets.length;
       }
       if (loc.attackScore == 0.0 && recentLocs.contains(loc.loc)) {
         score -= (rlCounter + 1) * 0.2;
