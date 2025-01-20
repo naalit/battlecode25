@@ -212,6 +212,10 @@ public class Map {
   public Ruin tryAddRuin(MapLocation ruin, int roundSeen) {
     if (tile(ruin).tower != null && tile(ruin).tower.roundSeen > roundSeen) return null;
     if (!tile(ruin).isInRuin()) {
+      if (rc.getType().isTowerType() || rc.canSenseLocation(ruin)) {
+        // Comms the ruin as soon as possible
+        comms.midx = 0;
+      }
       var r = new Ruin(ruin);
       ruins.add(r);
       for (int x = -2; x < 3; x++) {
@@ -278,8 +282,7 @@ public class Map {
 
     for (var r : rc.senseNearbyRobots()) {
       if (r.type.isTowerType()) {
-        var tower = tryAddTower(r.location, r.team, r.type, rc.getRoundNum());
-        tower.roundSeen = rc.getRoundNum();
+        tryAddTower(r.location, r.team, r.type, rc.getRoundNum());
       }
     }
 

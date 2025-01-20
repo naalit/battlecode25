@@ -50,7 +50,7 @@ public class Comms {
     }
   }
 
-  int midx, uidx;
+  public int midx, uidx;
 
   void update() throws GameActionException {
     var rc = RobotPlayer.rc;
@@ -82,10 +82,11 @@ public class Comms {
       while (sent < max) {
         var unit = RobotPlayer.nearbyAllies[uidx++ % ulength];
         if (unit.getType().isTowerType() != isTower && rc.canSendMessage(unit.location)) {
+          rc.setIndicatorLine(rc.getLocation(), unit.location, 0, 255, 0);
           var i = midx++ % mlength;
           Message m;
           if (i < map.ruins.size()) {
-            var ruin = map.ruins.get(i);
+            var ruin = map.ruins.get(map.ruins.size() - i - 1);
             m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
           } else {
             var tower = map.towers.get(i - map.ruins.size());
@@ -111,7 +112,7 @@ public class Comms {
         var i = midx++ % mlength;
         Message m;
         if (i < map.ruins.size()) {
-          var ruin = map.ruins.get(i);
+          var ruin = map.ruins.get(map.ruins.size() - i - 1);
           m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
         } else {
           var tower = map.towers.get(i - map.ruins.size());
