@@ -147,6 +147,27 @@ public class Map {
   public Tower closestPaintTower;
   public Tower closestEnemyTower;
   public ResourcePattern closestRP;
+  public int[][] visitedTiles = new int[12][12];
+
+  void updateVisited() {
+    int cx = rc.getLocation().x / 5, cy = rc.getLocation().y / 5;
+    visitedTiles[cx][cy] = rc.getRoundNum();
+  }
+
+  public MapLocation findUnvisitedTile() {
+    int bx = 0, by = 0;
+    int best = 3000;
+    for (int i = 0; i < 5; i++) {
+      int cx = rng() % (width / 5), cy = rng() % (height / 5);
+      var t = visitedTiles[cx][cy];
+      if (t < best) {
+        bx = cx;
+        by = cy;
+        best = t;
+      }
+    }
+    return best == 3000 ? null : new MapLocation(bx * 5 + 3, by * 5 + 3);
+  }
 
   public Map() {
     height = rc.getMapHeight();
@@ -235,6 +256,8 @@ public class Map {
   }
 
   public void update() throws GameActionException {
+    updateVisited();
+
     if (rc.getType().isTowerType()) {
       tryAddTower(rc.getLocation(), rc.getTeam(), rc.getType().getBaseType(), rc.getRoundNum());
     }

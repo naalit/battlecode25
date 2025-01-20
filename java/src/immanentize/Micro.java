@@ -130,6 +130,9 @@ public class Micro {
 
     // Exploration
     if (exploreTarget == null || exploreTarget.isWithinDistanceSquared(bot.startPos, 2)) {
+      exploreTarget = map.findUnvisitedTile();
+    }
+    if (exploreTarget == null || exploreTarget.isWithinDistanceSquared(bot.startPos, 2)) {
       exploreTarget = new MapLocation(rng() % rc.getMapWidth(), rng() % rc.getMapHeight());
     }
     return exploreTarget;
@@ -397,6 +400,9 @@ public class Micro {
     }
     bfAttack = Clock.getBytecodeNum();
     var target = pickTarget(bot);
+    if (target != null) {
+      rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
+    }
     bfTarget = Clock.getBytecodeNum();
     processAttacks(locs, bot);
     bfScore = Clock.getBytecodeNum();

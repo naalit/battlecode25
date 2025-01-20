@@ -108,8 +108,8 @@ public class RobotPlayer {
         var q = Clock.getBytecodeNum();
         comms.update();
 
-        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && (rc.getRoundNum() < 5 || rc.getID() % 13 == 0)) {
-          Micro.exploreTarget = exploreLocs[(rc.getID() + rc.getRoundNum()) % exploreLocs.length];
+        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 30 == 0) {
+          Micro.exploreTarget = exploreLocs[rng() % exploreLocs.length];
         }
         // Making sure columns in view are initialized before the turn starts so we can optimize checks to `tiles[x][y]`
         for (int x = -4; x < 5; x++) {
@@ -130,7 +130,7 @@ public class RobotPlayer {
 
             // Resupply nearby soldiers/splashers
             // TODO put this in micro
-            if (rc.getPaint() >= minPaint() + 10 && rc.isActionReady()) {
+            if (rc.getPaint() >= 60 && rc.isActionReady()) {
               for (var unit : rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam())) {
                 if (unit.getType().isRobotType() && unit.getType() != UnitType.MOPPER && unit.paintAmount < unit.getType().paintCapacity) {
                   var transfer = Math.min(rc.getPaint() - 50, unit.getType().paintCapacity - unit.paintAmount);
