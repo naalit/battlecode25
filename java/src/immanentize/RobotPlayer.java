@@ -133,7 +133,7 @@ public class RobotPlayer {
             if (rc.getPaint() >= minPaint() + 10 && rc.isActionReady()) {
               for (var unit : rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam())) {
                 if (unit.getType().isRobotType() && unit.getType() != UnitType.MOPPER && unit.paintAmount < unit.getType().paintCapacity) {
-                  var transfer = Math.min(rc.getPaint() - minPaint() - 3, unit.getType().paintCapacity - unit.paintAmount);
+                  var transfer = Math.min(rc.getPaint() - 50, unit.getType().paintCapacity - unit.paintAmount);
                   rc.transferPaint(unit.location, transfer);
                   break;
                 }

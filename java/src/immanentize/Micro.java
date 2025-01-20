@@ -21,8 +21,8 @@ public class Micro {
   static final double FREE_PAINT_VALUE = 2.0;
   static final double FREE_PAINT_FIXED_VALUE = 0.5;
   static final int SOLDIER_PAINT_MIN = 15;
-  static final int MOPPER_PAINT_MIN = 50;
-  static final int SPLASHER_PAINT_MIN = 50;
+  static final int MOPPER_PAINT_MIN = 40;
+  static final int SPLASHER_PAINT_MIN = 40;
 
   static int minPaint() {
     return switch (rc.getType()) {
@@ -116,6 +116,11 @@ public class Micro {
       }
       if (best != null)
         return best;
+    }
+
+    if (map.ruinTarget != null && bot.type == UnitType.MOPPER
+        && map.ruinTarget.enemyTiles > 0 && doTowers()) {
+      return map.ruinTarget.center;
     }
 
     // Paint resupply - if nothing else important to do (for soldiers)
@@ -392,25 +397,6 @@ public class Micro {
     }
     bfAttack = Clock.getBytecodeNum();
     var target = pickTarget(bot);
-//    MapLocation target = null;
-//    if (locs.length > 1) {
-//      for (var r : targets) {
-//        var x = r.fun().get();
-//        if (x.isPresent()) {
-//          target = x.get();
-//          break;
-//        }
-//      }
-//      if (target != null) {
-//        if (!target.equals(lastTarget)) {
-//          recentLocs.clear();
-//          recentLocs.add(bot.startPos);
-//        }
-//        lastTarget = target;
-//        rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
-//      }
-//    }
-    // var target = Arrays.stream(targets).flatMap(x -> x.fun().get().stream()).findFirst();
     bfTarget = Clock.getBytecodeNum();
     processAttacks(locs, bot);
     bfScore = Clock.getBytecodeNum();

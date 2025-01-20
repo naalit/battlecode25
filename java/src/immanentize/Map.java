@@ -278,7 +278,7 @@ public class Map {
     closestEnemyTower = null;
     for (var tower : towers) {
       rc.setIndicatorDot(tower.loc, 255, 0, 0);
-      if (tower.team == rc.getTeam() && tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) {
+      if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= 50))) {
         if (closestPaintTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestPaintTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestPaintTower = tower;
         }
