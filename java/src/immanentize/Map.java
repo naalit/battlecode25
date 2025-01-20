@@ -26,13 +26,16 @@ public class Map {
 
     public UnitType type() throws GameActionException {
       if (typeRound == rc.getRoundNum()) return type;
+      var big = rc.getMapHeight() >= 30 || rc.getMapWidth() >= 30;
       typeRound = rc.getRoundNum();
-      type = (hash(center) % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      type = (hash(center) % 7) >= (big ? 2 : 3) ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
       if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
-      type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
+      if (rc.getNumberTowers() <= 2) {
+          type = UnitType.LEVEL_ONE_MONEY_TOWER;
+      }
       // then paint tower
-      type = rc.getNumberTowers() == 3 ? UnitType.LEVEL_ONE_PAINT_TOWER : type;
+      if (rc.getNumberTowers() == 3 && !big) type = UnitType.LEVEL_ONE_PAINT_TOWER;
 //      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 3 && (hash(center) % 5) == 0)
 //        type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
       if (rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {

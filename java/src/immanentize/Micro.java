@@ -35,7 +35,7 @@ public class Micro {
   }
 
   static boolean doTowers() {
-    return rc.getChips() >= UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.7;
+    return rc.getChips() >= UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.7 || nearbyAllies.length == 0;
   }
 
   static MapLocation exploreTarget = null;

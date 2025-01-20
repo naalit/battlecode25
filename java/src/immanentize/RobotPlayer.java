@@ -179,11 +179,12 @@ public class RobotPlayer {
                 } else if (rc.getRoundNum() < 30) {
                   mopperChance = 0;
                 }
-                if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 100) {
+                if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 80) {
                   splasherChance = 0;
                 }
                 if (rc.getRoundNum() > 500) {
-                  mopperChance = 3.0 / 5.0;
+                  mopperChance = 1.0 / 2.0;
+                  splasherChance = 1 / 4.0;
                 }
 
                 toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
@@ -214,6 +215,9 @@ public class RobotPlayer {
               rc.disintegrate();
             }
             if (rc.getChips() > 40000 && rc.getNumberTowers() > 5 && rc.getType().getBaseType() == UnitType.LEVEL_ONE_MONEY_TOWER && rc.getID() % 3 == 0) {
+              rc.disintegrate();
+            }
+            if (rc.getChips() > 100000 && rc.getNumberTowers() > 5 && rc.getType().getBaseType() == UnitType.LEVEL_ONE_MONEY_TOWER && rc.getID() % 3 != 1) {
               rc.disintegrate();
             }
           }
