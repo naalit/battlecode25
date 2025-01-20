@@ -11,12 +11,12 @@ import concurrent.futures
 ###
 
 TEAM1 = "immanentize"
-TEAM2 = "immanentize_check2"
+TEAM2 = "immanentize_check4"
 WITH_REVERSE = True
 SAVE_LOCATION = "./trial_logs/"
 #COMMAND = "gradlew"
 COMMAND = "./gradlew"
-MAX_WORKERS = 4
+MAX_WORKERS = 3
 
 # when run mapnames() replace between example and closing bracket
 DEFAULT_MAPS = [

@@ -132,7 +132,7 @@ public class RobotPlayer {
             // TODO put this in micro
             if (rc.getPaint() >= 60 && rc.isActionReady()) {
               for (var unit : rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam())) {
-                if (unit.getType().isRobotType() && unit.getType() != UnitType.MOPPER && unit.paintAmount < unit.getType().paintCapacity) {
+                if (unit.getType().isRobotType() && (unit.getType() != UnitType.MOPPER || unit.paintAmount < 40) && unit.paintAmount < unit.getType().paintCapacity) {
                   var transfer = Math.min(rc.getPaint() - 50, unit.getType().paintCapacity - unit.paintAmount);
                   rc.transferPaint(unit.location, transfer);
                   break;
@@ -163,7 +163,7 @@ public class RobotPlayer {
               toSpawn = UnitType.SOLDIER;
             }
             if (/*(rc.getNumberTowers() > 2 || map.ruinTarget == null) &&*/ (rc.getRoundNum() < 20 || rc.getChips() > 1200)) {
-              if (toSpawn == null) {
+              if (toSpawn == null && (nearbyAllies.length < 12)) {
                 var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
                 var mopperChance = 2.0 / 5.0;
@@ -195,7 +195,7 @@ public class RobotPlayer {
               var selfPaint = false;
               // Spawn on our paint if possible
               for (var dir : MOVE_DIRECTIONS) {
-                if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
+                if (toSpawn != null && rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
                   if (bdir == null || !selfPaint) {
                     var paint = rc.senseMapInfo(rc.getLocation().add(dir)).getPaint().isAlly();
                     bdir = dir;

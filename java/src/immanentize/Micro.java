@@ -3,8 +3,6 @@ package immanentize;
 import battlecode.common.*;
 
 import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -98,7 +96,9 @@ public class Micro {
     }
 
     // Soldier(/splasher?): target enemy towers
-    //new TargetType(() -> Optional.ofNullable(map.closestEnemyTower).map(x -> x.loc).filter(x -> rc.getType() != UnitType.MOPPER && rc.getID() % 3 != 0 && rc.getPaint() >= minPaint() + rc.getType().attackCost)),
+    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 0 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
+      return map.closestEnemyTower.loc;
+    }
 
     // Mopper/splasher: find enemy paint
     if (bot.type == UnitType.MOPPER) {
@@ -285,6 +285,7 @@ public class Micro {
       if (bot.paint < minPaint() + UnitType.SOLDIER.attackCost) return;
       var mscore = 0.0;
       var cost = bot.type.attackCost * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+      if (!map.isPaintTower) cost = MAP_PAINT_VALUE * 1.1;
       var ptile = lastTarget == null ? null : bot.startPos.add(bot.startPos.directionTo(lastTarget));
       var rtarget = map.ruinTarget != null ? map.ruinTarget.center : new MapLocation(70, 70);
       var rptarget = map.closestRP != null ? map.closestRP.center : new MapLocation(70, 70);
@@ -344,7 +345,7 @@ public class Micro {
     for (var unit : rc.senseNearbyRobots(bot.startPos, 8, rc.getTeam())) {
       for (var loc : locs) {
         if (unit.location.isWithinDistanceSquared(loc.loc, 2)) {
-          if (mopReady && unit.type.isRobotType() && unit.type != UnitType.MOPPER && unit.paintAmount < unit.type.paintCapacity) {
+          if (mopReady && unit.type.isRobotType() && (unit.getType() != UnitType.MOPPER || unit.paintAmount < 40) && unit.paintAmount <= unit.type.paintCapacity - 10) {
             mopReady = false;
           } else if (unit.type.isRobotType() || bot.paint >= minPaint() + 50 || unit.paintAmount < 50) {
             loc.adjacentAllies += 1;

@@ -27,7 +27,7 @@ public class Map {
     public UnitType type() throws GameActionException {
       if (typeRound == rc.getRoundNum()) return type;
       typeRound = rc.getRoundNum();
-      type = (hash(center) % 2) == 0 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+      type = (hash(center) % 5) >= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
       if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
       // money tower first ?
       type = rc.getNumberTowers() <= 2 ? UnitType.LEVEL_ONE_MONEY_TOWER : type;
@@ -145,6 +145,7 @@ public class Map {
   public ArrayList<ResourcePattern> rps = new ArrayList<>();
   public Ruin ruinTarget;
   public Tower closestPaintTower;
+  public boolean isPaintTower;
   public Tower closestEnemyTower;
   public ResourcePattern closestRP;
   public int[][] visitedTiles = new int[12][12];
@@ -299,9 +300,11 @@ public class Map {
 
     closestPaintTower = null;
     closestEnemyTower = null;
+    isPaintTower = false;
     for (var tower : towers) {
       rc.setIndicatorDot(tower.loc, 255, 0, 0);
       if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= 50))) {
+        if (!isPaintTower && tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) isPaintTower = true;
         if (closestPaintTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestPaintTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestPaintTower = tower;
         }
