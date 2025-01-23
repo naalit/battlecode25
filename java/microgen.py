@@ -31,7 +31,7 @@ for i in range(-4, 5):
         if i*i + j*j > 20:
             continue
         print(f"    loc = center.translate({i}, {j});")
-        print( "    if (rc.onTheMap(loc)) {");
+        print( "    if (rc.onTheMap(loc)) {")
 
         print( "      var tile = rc.senseMapInfo(loc);")
         print( "      if (tile.isPassable()) {")
@@ -52,6 +52,17 @@ for i in range(-4, 5):
             #if ax > 0 and ay > 0 and ax < 7 and ay < 7:
             if ax*ax + ay*ay <= 10:
                 print(f"          locs[{ax+3}][{ay+3}] += 2 * MAP_PAINT_VALUE;")
+
+        print( "        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {")
+
+        # Penalize painting over secondary friendly paint
+        # (Would specifically penalize painting over resource patterns but that's too much bytecode)
+        for k in range(len(offx)):
+            ax = i + offx[k]
+            ay = j + offy[k]
+            #if ax > 0 and ay > 0 and ax < 7 and ay < 7:
+            if ax*ax + ay*ay <= 10:
+                print(f"          locs[{ax+3}][{ay+3}] -= 1.5 * MAP_PAINT_VALUE;")
 
         print( "        }")
         print( "      }")
@@ -117,8 +128,7 @@ print("    for (var uloc : ulocs) {")
 print("      var dx = uloc.loc.x - center.x;")
 print("      var dy = uloc.loc.y - center.y;")
 print("      var idx = (dy + 1) + (dx + 1) * 3;")
-print("      uloc.attackTarget = moveLocs[idx];")
-print("      uloc.attackScore = moveScores[idx];")
+print("      uloc.attack = new Attack(moveScores[idx], moveLocs[idx], null);")
 print("    }")
 
 print("  }")

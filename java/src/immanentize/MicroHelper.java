@@ -3,7 +3,6 @@
 package immanentize;
 
 import battlecode.common.*;
-
 import static immanentize.Micro.*;
 import static immanentize.RobotPlayer.*;
 
@@ -23,6 +22,9 @@ public class MicroHelper {
           locs[0][2] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[0][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -37,6 +39,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[0][2] += 2 * MAP_PAINT_VALUE;
           locs[0][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -53,6 +59,11 @@ public class MicroHelper {
           locs[0][2] += 2 * MAP_PAINT_VALUE;
           locs[0][3] += 2 * MAP_PAINT_VALUE;
           locs[0][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -67,6 +78,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[0][3] += 2 * MAP_PAINT_VALUE;
           locs[0][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -79,6 +94,9 @@ public class MicroHelper {
           locs[0][4] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[0][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -92,6 +110,10 @@ public class MicroHelper {
           locs[0][2] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[1][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -109,6 +131,12 @@ public class MicroHelper {
           locs[0][2] += 2 * MAP_PAINT_VALUE;
           locs[1][1] += 2 * MAP_PAINT_VALUE;
           locs[1][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -130,6 +158,14 @@ public class MicroHelper {
           locs[1][1] += 2 * MAP_PAINT_VALUE;
           locs[1][2] += 2 * MAP_PAINT_VALUE;
           locs[1][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -152,6 +188,14 @@ public class MicroHelper {
           locs[1][2] += 2 * MAP_PAINT_VALUE;
           locs[1][3] += 2 * MAP_PAINT_VALUE;
           locs[1][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -173,6 +217,14 @@ public class MicroHelper {
           locs[1][3] += 2 * MAP_PAINT_VALUE;
           locs[1][4] += 2 * MAP_PAINT_VALUE;
           locs[1][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -190,6 +242,12 @@ public class MicroHelper {
           locs[0][4] += 2 * MAP_PAINT_VALUE;
           locs[1][4] += 2 * MAP_PAINT_VALUE;
           locs[1][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -203,6 +261,10 @@ public class MicroHelper {
           locs[0][4] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[1][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -215,6 +277,9 @@ public class MicroHelper {
           locs[1][1] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[2][0] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -232,6 +297,12 @@ public class MicroHelper {
           locs[1][1] += 2 * MAP_PAINT_VALUE;
           locs[2][0] += 2 * MAP_PAINT_VALUE;
           locs[2][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -255,6 +326,15 @@ public class MicroHelper {
           locs[2][0] += 2 * MAP_PAINT_VALUE;
           locs[2][1] += 2 * MAP_PAINT_VALUE;
           locs[2][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -282,6 +362,17 @@ public class MicroHelper {
           locs[2][1] += 2 * MAP_PAINT_VALUE;
           locs[2][2] += 2 * MAP_PAINT_VALUE;
           locs[2][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -312,6 +403,19 @@ public class MicroHelper {
           locs[2][2] += 2 * MAP_PAINT_VALUE;
           locs[2][3] += 2 * MAP_PAINT_VALUE;
           locs[2][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -339,6 +443,17 @@ public class MicroHelper {
           locs[2][3] += 2 * MAP_PAINT_VALUE;
           locs[2][4] += 2 * MAP_PAINT_VALUE;
           locs[2][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -362,6 +477,15 @@ public class MicroHelper {
           locs[2][4] += 2 * MAP_PAINT_VALUE;
           locs[2][5] += 2 * MAP_PAINT_VALUE;
           locs[2][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -379,6 +503,12 @@ public class MicroHelper {
           locs[1][5] += 2 * MAP_PAINT_VALUE;
           locs[2][5] += 2 * MAP_PAINT_VALUE;
           locs[2][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -391,6 +521,9 @@ public class MicroHelper {
           locs[1][5] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[2][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -405,6 +538,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[2][0] += 2 * MAP_PAINT_VALUE;
           locs[3][0] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -426,6 +563,14 @@ public class MicroHelper {
           locs[2][1] += 2 * MAP_PAINT_VALUE;
           locs[3][0] += 2 * MAP_PAINT_VALUE;
           locs[3][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -453,6 +598,17 @@ public class MicroHelper {
           locs[3][0] += 2 * MAP_PAINT_VALUE;
           locs[3][1] += 2 * MAP_PAINT_VALUE;
           locs[3][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -484,6 +640,20 @@ public class MicroHelper {
           locs[3][1] += 2 * MAP_PAINT_VALUE;
           locs[3][2] += 2 * MAP_PAINT_VALUE;
           locs[3][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -515,6 +685,20 @@ public class MicroHelper {
           locs[3][2] += 2 * MAP_PAINT_VALUE;
           locs[3][3] += 2 * MAP_PAINT_VALUE;
           locs[3][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -546,6 +730,20 @@ public class MicroHelper {
           locs[3][3] += 2 * MAP_PAINT_VALUE;
           locs[3][4] += 2 * MAP_PAINT_VALUE;
           locs[3][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[0][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -573,6 +771,17 @@ public class MicroHelper {
           locs[3][4] += 2 * MAP_PAINT_VALUE;
           locs[3][5] += 2 * MAP_PAINT_VALUE;
           locs[3][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -594,6 +803,14 @@ public class MicroHelper {
           locs[2][6] += 2 * MAP_PAINT_VALUE;
           locs[3][5] += 2 * MAP_PAINT_VALUE;
           locs[3][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -608,6 +825,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[2][6] += 2 * MAP_PAINT_VALUE;
           locs[3][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -624,6 +845,11 @@ public class MicroHelper {
           locs[2][0] += 2 * MAP_PAINT_VALUE;
           locs[3][0] += 2 * MAP_PAINT_VALUE;
           locs[4][0] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -646,6 +872,14 @@ public class MicroHelper {
           locs[3][1] += 2 * MAP_PAINT_VALUE;
           locs[4][0] += 2 * MAP_PAINT_VALUE;
           locs[4][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -676,6 +910,19 @@ public class MicroHelper {
           locs[4][0] += 2 * MAP_PAINT_VALUE;
           locs[4][1] += 2 * MAP_PAINT_VALUE;
           locs[4][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -707,6 +954,20 @@ public class MicroHelper {
           locs[4][1] += 2 * MAP_PAINT_VALUE;
           locs[4][2] += 2 * MAP_PAINT_VALUE;
           locs[4][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -738,6 +999,20 @@ public class MicroHelper {
           locs[4][2] += 2 * MAP_PAINT_VALUE;
           locs[4][3] += 2 * MAP_PAINT_VALUE;
           locs[4][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -769,6 +1044,20 @@ public class MicroHelper {
           locs[4][3] += 2 * MAP_PAINT_VALUE;
           locs[4][4] += 2 * MAP_PAINT_VALUE;
           locs[4][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -799,6 +1088,19 @@ public class MicroHelper {
           locs[4][4] += 2 * MAP_PAINT_VALUE;
           locs[4][5] += 2 * MAP_PAINT_VALUE;
           locs[4][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[1][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -821,6 +1123,14 @@ public class MicroHelper {
           locs[3][6] += 2 * MAP_PAINT_VALUE;
           locs[4][5] += 2 * MAP_PAINT_VALUE;
           locs[4][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -837,6 +1147,11 @@ public class MicroHelper {
           locs[2][6] += 2 * MAP_PAINT_VALUE;
           locs[3][6] += 2 * MAP_PAINT_VALUE;
           locs[4][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -851,6 +1166,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[3][0] += 2 * MAP_PAINT_VALUE;
           locs[4][0] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -872,6 +1191,14 @@ public class MicroHelper {
           locs[4][0] += 2 * MAP_PAINT_VALUE;
           locs[4][1] += 2 * MAP_PAINT_VALUE;
           locs[5][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][0] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -899,6 +1226,17 @@ public class MicroHelper {
           locs[4][2] += 2 * MAP_PAINT_VALUE;
           locs[5][1] += 2 * MAP_PAINT_VALUE;
           locs[5][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -930,6 +1268,20 @@ public class MicroHelper {
           locs[5][1] += 2 * MAP_PAINT_VALUE;
           locs[5][2] += 2 * MAP_PAINT_VALUE;
           locs[5][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -961,6 +1313,20 @@ public class MicroHelper {
           locs[5][2] += 2 * MAP_PAINT_VALUE;
           locs[5][3] += 2 * MAP_PAINT_VALUE;
           locs[5][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -992,6 +1358,20 @@ public class MicroHelper {
           locs[5][3] += 2 * MAP_PAINT_VALUE;
           locs[5][4] += 2 * MAP_PAINT_VALUE;
           locs[5][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1019,6 +1399,17 @@ public class MicroHelper {
           locs[4][6] += 2 * MAP_PAINT_VALUE;
           locs[5][4] += 2 * MAP_PAINT_VALUE;
           locs[5][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1040,6 +1431,14 @@ public class MicroHelper {
           locs[4][5] += 2 * MAP_PAINT_VALUE;
           locs[4][6] += 2 * MAP_PAINT_VALUE;
           locs[5][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[2][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1054,6 +1453,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[3][6] += 2 * MAP_PAINT_VALUE;
           locs[4][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1066,6 +1469,9 @@ public class MicroHelper {
           locs[4][0] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[4][0] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1083,6 +1489,12 @@ public class MicroHelper {
           locs[4][0] += 2 * MAP_PAINT_VALUE;
           locs[4][1] += 2 * MAP_PAINT_VALUE;
           locs[5][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][0] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1106,6 +1518,15 @@ public class MicroHelper {
           locs[5][1] += 2 * MAP_PAINT_VALUE;
           locs[5][2] += 2 * MAP_PAINT_VALUE;
           locs[6][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1133,6 +1554,17 @@ public class MicroHelper {
           locs[5][3] += 2 * MAP_PAINT_VALUE;
           locs[6][2] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1163,6 +1595,19 @@ public class MicroHelper {
           locs[6][2] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1190,6 +1635,17 @@ public class MicroHelper {
           locs[5][5] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1213,6 +1669,15 @@ public class MicroHelper {
           locs[5][4] += 2 * MAP_PAINT_VALUE;
           locs[5][5] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1230,6 +1695,12 @@ public class MicroHelper {
           locs[4][5] += 2 * MAP_PAINT_VALUE;
           locs[4][6] += 2 * MAP_PAINT_VALUE;
           locs[5][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
+          locs[3][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1242,6 +1713,9 @@ public class MicroHelper {
           locs[4][6] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[4][6] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1255,6 +1729,10 @@ public class MicroHelper {
           locs[4][0] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[5][1] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][0] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1272,6 +1750,12 @@ public class MicroHelper {
           locs[5][1] += 2 * MAP_PAINT_VALUE;
           locs[5][2] += 2 * MAP_PAINT_VALUE;
           locs[6][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1293,6 +1777,14 @@ public class MicroHelper {
           locs[5][3] += 2 * MAP_PAINT_VALUE;
           locs[6][2] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1315,6 +1807,14 @@ public class MicroHelper {
           locs[6][2] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1336,6 +1836,14 @@ public class MicroHelper {
           locs[5][5] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1353,6 +1861,12 @@ public class MicroHelper {
           locs[5][4] += 2 * MAP_PAINT_VALUE;
           locs[5][5] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1366,6 +1880,10 @@ public class MicroHelper {
           locs[4][6] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[5][5] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
+          locs[4][6] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1378,6 +1896,9 @@ public class MicroHelper {
           locs[5][1] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[6][2] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][1] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1392,6 +1913,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[6][2] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][2] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1408,6 +1933,11 @@ public class MicroHelper {
           locs[6][2] += 2 * MAP_PAINT_VALUE;
           locs[6][3] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][2] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][3] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1422,6 +1952,10 @@ public class MicroHelper {
         } else if (tile.getPaint().isEnemy()) {
           locs[6][3] += 2 * MAP_PAINT_VALUE;
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][3] -= 1.5 * MAP_PAINT_VALUE;
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][4] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1434,6 +1968,9 @@ public class MicroHelper {
           locs[5][5] += MAP_PAINT_VALUE;
         } else if (tile.getPaint().isEnemy()) {
           locs[6][4] += 2 * MAP_PAINT_VALUE;
+        } else if (tile.getPaint() == PaintType.ALLY_SECONDARY) {
+          locs[6][4] -= 1.5 * MAP_PAINT_VALUE;
+          locs[5][5] -= 1.5 * MAP_PAINT_VALUE;
         }
       }
     }
@@ -1446,55 +1983,55 @@ public class MicroHelper {
       var y = unit.location.y - center.y;
       int ax, ay;
       ax = x + 2;
-      if (ax * ax + y * y <= 10) {
-        locs[ax + 3][y + 3] += d;
+      if (ax*ax + y*y <= 10) {
+        locs[ax+3][y+3] += d;
       }
       ax = x + 1;
       ay = y + -1;
-      if (ax * ax + ay * ay <= 10) {
-        locs[ax + 3][ay + 3] += d;
+      if (ax*ax + ay*ay <= 10) {
+        locs[ax+3][ay+3] += d;
       }
-      if (ax * ax + y * y <= 10) {
-        locs[ax + 3][y + 3] += d;
+      if (ax*ax + y*y <= 10) {
+        locs[ax+3][y+3] += d;
       }
       ay = y + 1;
-      if (ax * ax + ay * ay <= 10) {
-        locs[ax + 3][ay + 3] += d;
+      if (ax*ax + ay*ay <= 10) {
+        locs[ax+3][ay+3] += d;
       }
       ay = y + -2;
-      if (x * x + ay * ay <= 10) {
-        locs[x + 3][ay + 3] += d;
+      if (x*x + ay*ay <= 10) {
+        locs[x+3][ay+3] += d;
       }
       ay = y + -1;
-      if (x * x + ay * ay <= 10) {
-        locs[x + 3][ay + 3] += d;
+      if (x*x + ay*ay <= 10) {
+        locs[x+3][ay+3] += d;
       }
-      if (x * x + y * y <= 10) {
-        locs[x + 3][y + 3] += d;
+      if (x*x + y*y <= 10) {
+        locs[x+3][y+3] += d;
       }
       ay = y + 1;
-      if (x * x + ay * ay <= 10) {
-        locs[x + 3][ay + 3] += d;
+      if (x*x + ay*ay <= 10) {
+        locs[x+3][ay+3] += d;
       }
       ay = y + 2;
-      if (x * x + ay * ay <= 10) {
-        locs[x + 3][ay + 3] += d;
+      if (x*x + ay*ay <= 10) {
+        locs[x+3][ay+3] += d;
       }
       ax = x + -1;
       ay = y + -1;
-      if (ax * ax + ay * ay <= 10) {
-        locs[ax + 3][ay + 3] += d;
+      if (ax*ax + ay*ay <= 10) {
+        locs[ax+3][ay+3] += d;
       }
-      if (ax * ax + y * y <= 10) {
-        locs[ax + 3][y + 3] += d;
+      if (ax*ax + y*y <= 10) {
+        locs[ax+3][y+3] += d;
       }
       ay = y + 1;
-      if (ax * ax + ay * ay <= 10) {
-        locs[ax + 3][ay + 3] += d;
+      if (ax*ax + ay*ay <= 10) {
+        locs[ax+3][ay+3] += d;
       }
       ax = x + -2;
-      if (ax * ax + y * y <= 10) {
-        locs[ax + 3][y + 3] += d;
+      if (ax*ax + y*y <= 10) {
+        locs[ax+3][y+3] += d;
       }
     }
 
@@ -2048,8 +2585,7 @@ public class MicroHelper {
       var dx = uloc.loc.x - center.x;
       var dy = uloc.loc.y - center.y;
       var idx = (dy + 1) + (dx + 1) * 3;
-      uloc.attackTarget = moveLocs[idx];
-      uloc.attackScore = moveScores[idx];
+      uloc.attack = new Attack(moveScores[idx], moveLocs[idx], null);
     }
   }
 }

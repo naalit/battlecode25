@@ -11,6 +11,7 @@ public class Comms {
       Ruin,
       Tower,
       RemoveWatchtower,
+      PanicMode,
     }
 
     public Type type;
@@ -18,6 +19,7 @@ public class Comms {
     public MapLocation loc;
     public UnitType towerType;
     public Team team;
+    public boolean hasEnemyTiles;
 
     Message(Type type) {
       this.type = type;
@@ -36,6 +38,7 @@ public class Comms {
       towerType = (encoded & (1 << 24)) > 0 ? UnitType.LEVEL_ONE_MONEY_TOWER
           : (encoded & (1 << 25)) > 0 ? UnitType.LEVEL_ONE_PAINT_TOWER : UnitType.LEVEL_ONE_DEFENSE_TOWER;
       team = (encoded & (1 << 26)) > 0 ? rc.getTeam() : rc.getTeam().opponent();
+      hasEnemyTiles = (encoded & (1 << 27)) != 0;
     }
 
     int encode() {
@@ -46,19 +49,28 @@ public class Comms {
       if (towerType == UnitType.LEVEL_ONE_MONEY_TOWER) i |= 1 << 24;
       if (towerType == UnitType.LEVEL_ONE_PAINT_TOWER) i |= 1 << 25;
       if (team == rc.getTeam()) i |= 1 << 26;
+      if (hasEnemyTiles) i |= 1 << 27;
       return i;
     }
   }
 
   public int midx, uidx;
+  public MapLocation panickingTower = null;
+  public int panicRound;
 
   void update() throws GameActionException {
+    if (panickingTower != null && rc.getRoundNum() > panicRound + 5) panickingTower = null;
+
     var rc = RobotPlayer.rc;
     for (var data : rc.readMessages(rc.getRoundNum() - 1)) {
       var m = new Message(data.getBytes());
       switch (m.type) {
         case Ruin -> {
-          map.tryAddRuin(m.loc, m.round);
+          var r = map.tryAddRuin(m.loc, m.round);
+          if (r != null && m.hasEnemyTiles && r.enemyTiles == 0 && m.round == r.roundSeen) {
+            r.enemyTiles = 1;
+            r.clearEnemyTilesOnSeen = true;
+          }
         }
         case Tower -> {
           map.tryAddTower(m.loc, m.team, m.towerType, m.round);
@@ -67,6 +79,11 @@ public class Comms {
           if (rc.canRemoveMark(m.loc.add(Direction.NORTH))) {
             rc.removeMark(m.loc.add(Direction.NORTH));
           }
+        }
+        case PanicMode -> {
+          // we know we're a robot
+          panickingTower = m.loc;
+          panicRound = m.round;
         }
       }
     }
@@ -83,22 +100,28 @@ public class Comms {
         var unit = RobotPlayer.nearbyAllies[uidx++ % ulength];
         if (unit.getType().isTowerType() != isTower && rc.canSendMessage(unit.location)) {
           rc.setIndicatorLine(rc.getLocation(), unit.location, 0, 255, 0);
-          var i = midx++ % mlength;
           Message m;
-          if (i < map.ruins.size()) {
-            var ruin = map.ruins.get(map.ruins.size() - i - 1);
-            m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
+          if (RobotPlayer.panicMode) {
+            m = new Message(Message.Type.PanicMode, rc.getLocation(), rc.getRoundNum());
           } else {
-            var tower = map.towers.get(i - map.ruins.size());
-            m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);
-            m.towerType = tower.type;
-            m.team = tower.team;
+            var i = midx++ % mlength;
+            if (i < map.ruins.size()) {
+              var ruin = map.ruins.get(map.ruins.size() - i - 1);
+              m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
+              m.hasEnemyTiles = ruin.enemyTiles != 0;
+            } else {
+              var tower = map.towers.get(i - map.ruins.size());
+              m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);
+              m.towerType = tower.type;
+              m.team = tower.team;
+            }
+            if (i == (mstart + 1) % mlength && rc.getType().isTowerType() && (RobotPlayer.wantsToChangeTowerType || RobotPlayer.turnsSinceSeenEnemy > 150)) {
+              m.type = Message.Type.RemoveWatchtower;
+              m.loc = rc.getLocation();
+              rc.setIndicatorLine(rc.getLocation(), rc.getLocation().add(Direction.NORTH), 255, 0, 0);
+            }
           }
-          if (i == (mstart + 1) % mlength && (rc.getType().isTowerType() && /*rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER &&*/ RobotPlayer.turnsSinceSeenEnemy > 150)) {
-            m.type = Message.Type.RemoveWatchtower;
-            m.loc = rc.getLocation();
-            rc.setIndicatorLine(rc.getLocation(), rc.getLocation().add(Direction.NORTH), 255, 0, 0);
-          }
+          rc.setIndicatorLine(rc.getLocation(), m.loc, 255, 0, 0);
           rc.sendMessage(unit.location, m.encode());
           sent += 1;
         }
@@ -114,6 +137,7 @@ public class Comms {
         if (i < map.ruins.size()) {
           var ruin = map.ruins.get(map.ruins.size() - i - 1);
           m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
+          m.hasEnemyTiles = ruin.enemyTiles != 0;
         } else {
           var tower = map.towers.get(i - map.ruins.size());
           m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);

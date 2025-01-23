@@ -38,30 +38,37 @@ public class RobotPlayer {
 
   static int rng_acc = 0;
 
+  static final int SEED = -1918011995;
+//  static final int SEED = -1713814911;
+
   static int rng() {
     // xorshift or whatever
     if (rng_acc == 0) {
-      var id = rc.getID() ^ 0b1000_1101_1010_1101_0111_0101_1010_0101;
+      var id = rc.getID() ^ SEED;
       rng_acc = id ^ (id << 14);
     }
 
     rng_acc ^= rng_acc >> 7;
     rng_acc ^= rng_acc << 9;
     rng_acc ^= rng_acc >> 13;
-    return rng_acc;
+    return Math.abs(rng_acc);
   }
+
+  static final int TOWER_KEEP_PAINT = 100;
+  static final int MIN_TRANSFER_TOWER = 50;
+  static final int MIN_TRANSFER_MOPPER = 10;
 
   static void maybeReplenishPaint() throws GameActionException {
     if (rc.getPaint() - minPaint() < (rc.getType().paintCapacity - minPaint()) * Micro.FREE_PAINT_TARGET) {
       if (rc.isActionReady()) {
         Arrays.stream(rc.senseNearbyRobots(2, rc.getTeam()))
             // TODO constant for this
-            .filter(x -> x.getType().isTowerType() && x.paintAmount >= (x.getType().paintPerTurn > 0 ? 000 : 0) + 50)
+            .filter(x -> x.getType().isTowerType() && x.paintAmount >= TOWER_KEEP_PAINT + MIN_TRANSFER_TOWER)
             .findFirst()
             .ifPresent(x -> {
               // really annoying that we have to do this (since λ doesn't support throws)
               try {
-                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - (x.getType().paintPerTurn > 0 ? 000 : 0)));
+                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - TOWER_KEEP_PAINT));
               } catch (GameActionException e) {
                 throw new RuntimeException(e);
               }
@@ -74,15 +81,19 @@ public class RobotPlayer {
   static Comms comms;
 
   static int hash(MapLocation loc) {
-    var v = (loc.x << 12 | loc.y) ^ 0b110101110110101110;
+    var v = (loc.x << 12 | loc.y) ^ (SEED ^ 0b110101110110101110);
     v ^= v >> 9;
     v ^= v << 13;
-    return v;
+    return Math.abs(v);
   }
 
   static int upgradeTurns = 0;
   static UnitType toSpawn = null;
   static int turnsSinceSeenEnemy = 0;
+  static boolean wantsToChangeTowerType = false;
+  static int spawnCount = 0;
+  static boolean panicMode = false;
+  static MapLocation panicTarget = null;
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
@@ -103,14 +114,29 @@ public class RobotPlayer {
         nearbyEnemies = rc.senseNearbyRobots(GameConstants.VISION_RADIUS_SQUARED, rc.getTeam().opponent());
         if (nearbyEnemies.length == 0) turnsSinceSeenEnemy += 1;
         else turnsSinceSeenEnemy = 0;
+        if (rc.getType().isTowerType()) {
+          var nearbySoldiers = 0;
+          var panicDist = 1000000;
+          for (var i : nearbyEnemies) {
+            if (i.type == UnitType.SOLDIER) {
+              nearbySoldiers += 1;
+              var d = i.location.distanceSquaredTo(rc.getLocation());
+              if (d < panicDist) {
+                panicDist = d;
+                panicTarget = i.location;
+              }
+            }
+          }
+          panicMode = nearbySoldiers >= 2 || (nearbySoldiers == 1 && rc.getHealth() < rc.getType().health / 3);
+        }
 
         map.update();
         var q = Clock.getBytecodeNum();
         comms.update();
 
-        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 30 == 0) {
-          Micro.exploreTarget = exploreLocs[rng() % exploreLocs.length];
-        }
+//        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 30 == 0) {
+//          Micro.exploreTarget = exploreLocs[rng() % exploreLocs.length];
+//        }
         // Making sure columns in view are initialized before the turn starts so we can optimize checks to `tiles[x][y]`
         for (int x = -4; x < 5; x++) {
           var loc = rc.getLocation().translate(x, 0);
@@ -148,12 +174,12 @@ public class RobotPlayer {
             // Attack if possible
             Micro.doMicro();
 
-            // Self upgrade if possible (for money towers first)
+            // Self upgrade if possible (for paint towers first)
             if (rc.getNumberTowers() > 2 && rc.canUpgradeTower(rc.getLocation())) {
               upgradeTurns += 1;
-//              if (upgradeTurns > 2 || rc.getType().moneyPerTurn > 0) {
-              rc.upgradeTower(rc.getLocation());
-//              }
+              if (upgradeTurns > 3 * rc.getType().level + rc.getType().moneyPerTurn / 5) {
+                rc.upgradeTower(rc.getLocation());
+              }
             } else {
               upgradeTurns = 0;
             }
@@ -162,11 +188,12 @@ public class RobotPlayer {
             if (rc.getRoundNum() < 4) {
               toSpawn = UnitType.SOLDIER;
             }
-            if (/*(rc.getNumberTowers() > 2 || map.ruinTarget == null) &&*/ (rc.getRoundNum() < 20 || rc.getChips() > 1200)) {
+            if (rc.getRoundNum() < 30 || spawnCount == 0 || rc.getChips() > 1200 || panicMode) {
+              if (panicMode) toSpawn = UnitType.MOPPER;
               if (toSpawn == null && (nearbyAllies.length < 12)) {
                 var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
-                var mopperChance = 2.0 / 5.0;
+                var mopperChance = 2.0 / 6.0;
                 // More splashers on bigger maps
                 if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
                   splasherChance = 1.0 / 5.0;
@@ -182,9 +209,20 @@ public class RobotPlayer {
                 if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 80) {
                   splasherChance = 0;
                 }
-                if (rc.getRoundNum() > 500) {
-                  mopperChance = 1.0 / 2.0;
-                  splasherChance = 1 / 4.0;
+                if (rc.getRoundNum() > 300) {
+                  mopperChance = 2.0 / 5.0;
+                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
+                    splasherChance = 1 / 4.0;
+                  } else {
+                    splasherChance = 1 / 5.0;
+                  }
+                }
+                if (rc.getRoundNum() > 600) {
+                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
+                    splasherChance = 1 / 3.0;
+                  } else {
+                    splasherChance = 1 / 4.0;
+                  }
                 }
 
                 toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
@@ -192,34 +230,47 @@ public class RobotPlayer {
                     : UnitType.SOLDIER;
                 rc.setIndicatorString("chance: " + splasherChance + " / " + mopperChance + " --> " + toSpawn + " (sample " + (rng() % 100) + ")");
               }
-              Direction bdir = null;
-              var selfPaint = false;
-              // Spawn on our paint if possible
-              for (var dir : MOVE_DIRECTIONS) {
-                if (toSpawn != null && rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
-                  if (bdir == null || !selfPaint) {
+              if (toSpawn != null && rc.getPaint() >= toSpawn.paintCost + (panicMode ? 0 : TOWER_KEEP_PAINT)) {
+                Direction bdir = null;
+                var selfPaint = false;
+                var panicDist = 100000;
+                // Spawn on our paint if possible
+                for (var dir : MOVE_DIRECTIONS) {
+                  if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
+                    var d = panicMode ? panicTarget.distanceSquaredTo(rc.getLocation().add(dir)) : 0;
                     var paint = rc.senseMapInfo(rc.getLocation().add(dir)).getPaint().isAlly();
-                    bdir = dir;
-                    selfPaint = paint;
+                    if (bdir == null || d < panicDist || (d == panicDist && !selfPaint && paint)) {
+                      bdir = dir;
+                      selfPaint = paint;
+                      panicDist = d;
+                    }
                   }
                 }
+                if (bdir != null) {
+                  rc.buildRobot(toSpawn, rc.getLocation().add(bdir));
+                  spawnCount += 1;
+                  toSpawn = null;
+                }
               }
-              if (bdir != null) {
-                rc.buildRobot(toSpawn, rc.getLocation().add(bdir));
+              if (toSpawn != null && rc.getType().paintPerTurn == 0 && rc.getPaint() < toSpawn.paintCost + (panicMode ? 0 : TOWER_KEEP_PAINT)) {
                 toSpawn = null;
               }
             }
 
-            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150
-                && !rc.senseMapInfo(rc.getLocation().add(Direction.NORTH)).getMark().isSecondary()) {
-              rc.disintegrate();
+            if (rc.getType().getBaseType() == UnitType.LEVEL_ONE_DEFENSE_TOWER && turnsSinceSeenEnemy > 150) {
+              wantsToChangeTowerType = true;
             }
             if (rc.getChips() > 40000 && rc.getNumberTowers() > 5 && rc.getType().getBaseType() == UnitType.LEVEL_ONE_MONEY_TOWER && rc.getID() % 3 == 0) {
+              wantsToChangeTowerType = true;
+            }
+            if (rc.getChips() > 100000 && rc.getNumberTowers() > 5 && rc.getType().getBaseType() == UnitType.LEVEL_ONE_MONEY_TOWER && rc.getID() % 5 <= 1) {
+              wantsToChangeTowerType = true;
+            }
+            if (wantsToChangeTowerType && !rc.senseMapInfo(rc.getLocation().add(Direction.NORTH)).getMark().isAlly()) {
               rc.disintegrate();
             }
-            if (rc.getChips() > 100000 && rc.getNumberTowers() > 5 && rc.getType().getBaseType() == UnitType.LEVEL_ONE_MONEY_TOWER && rc.getID() % 3 != 1) {
-              rc.disintegrate();
-            }
+
+            if (panicMode) rc.setIndicatorString("PANIC MODE");
           }
         }
       } catch (Exception e) {

@@ -40,13 +40,24 @@ public class Micro {
 
   static MapLocation exploreTarget = null;
 
-  static MapLocation pickTarget(MicroBot bot) throws GameActionException {
+  record Target(MapLocation loc, double score) {
+  }
+
+  static Target pickTarget(MicroBot bot) throws GameActionException {
     // Paint resupply - URGENT
     if (map.closestPaintTower != null && bot.paint < minPaint() + bot.type.attackCost)
-      return map.closestPaintTower.loc;
+      return new Target(map.closestPaintTower.loc, 2.0);
+    if (map.closestFriendlyTower != null && bot.paint < minPaint() + bot.type.attackCost)
+      return new Target(map.closestFriendlyTower.loc, 2.0);
+//    if (bot.type == UnitType.SOLDIER && map.ruinTarget != null && nearbyAllies.length == 0 && bot.paint < bot.type.attackCost * (24 - map.ruinTarget.allyTiles) + minPaint())
+//      return new Target(map.closestFriendlyTower.loc, 10.0);
+
+    // Help out panicking tower
+    if (comms.panickingTower != null)
+      return new Target(comms.panickingTower, 1);
 
     // Mopper: find nearby soldier
-    if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= 60) {
+    if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= 50 + MIN_TRANSFER_MOPPER) {
       RobotInfo best = null;
       for (var x : nearbyAllies) {
         if (x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity) {
@@ -56,13 +67,13 @@ public class Micro {
         }
       }
       if (best != null) {
-        return best.location;
+        return new Target(best.location, 1.0);
       }
     }
 
-    if (map.closestRP != null && rc.getType() == UnitType.SOLDIER && (rc.getPaint() >= minPaint() + rc.getType().attackCost)
-        && (!doTowers() || map.ruinTarget == null) && rc.getLocation().isWithinDistanceSquared(map.closestRP.center, 8)) {
-      return map.closestRP.center;
+    if (map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
+        && map.isPaintTower && (!doTowers() || map.ruinTarget == null/* || (rc.getID() % 3 == 0 && rc.getNumberTowers() > 5)*/) && bot.startPos.isWithinDistanceSquared(map.closestRP.center, 8)) {
+      return new Target(map.closestRP.center, 1.0);
     }
 
     // Soldier: target unpainted tower squares
@@ -71,7 +82,7 @@ public class Micro {
       for (var loc : corners) {
         if (!rc.canSenseLocation(loc)) continue;
         if (!rc.senseMapInfo(loc).getPaint().isAlly() || (rc.senseMapInfo(loc).getPaint() == PaintType.ALLY_SECONDARY) != map.tile(loc).secondary()) {
-          return loc;
+          return new Target(loc, 1.0);
         }
       }
     }
@@ -79,25 +90,32 @@ public class Micro {
     if (map.ruinTarget != null && doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getLocation().isWithinDistanceSquared(map.ruinTarget.center, 8)) {
       var dx = rc.getLocation().x == map.ruinTarget.center.x ? (rc.getLocation().y > map.ruinTarget.center.y ? 1 : -1) : 0;
       var dy = rc.getLocation().y == map.ruinTarget.center.y ? (rc.getLocation().x > map.ruinTarget.center.x ? -1 : 1) : 0;
-      return map.ruinTarget.center.translate(dx, dy);
+      return new Target(map.ruinTarget.center.translate(dx, dy), 1.0);
     }
 
     // Soldier: target nearly-full resource pattern
-    if (map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null)) {
-      return map.closestRP.center;
+    if (map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null || (rc.getID() % 5 == 0 && map.isPaintTower))) {
+      return new Target(map.closestRP.center, 1);
     }
 
     // Soldier: target ruins
     if (map.ruinTarget != null && bot.type == UnitType.SOLDIER
-        && rc.getID() % 3 != 0
+        && (rc.getID() % 5 != 0 || !map.isPaintTower/* || rc.getNumberTowers() <= 5*/)
         && bot.paint >= minPaint() + bot.type.attackCost
         && doTowers()) {
-      return map.ruinTarget.center;
+      return new Target(map.ruinTarget.center, 1);
     }
 
     // Soldier(/splasher?): target enemy towers
     if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
-      return map.closestEnemyTower.loc;
+      return new Target(map.closestEnemyTower.loc, 1);
+    }
+
+    if (map.ruinTarget != null && bot.type != UnitType.SOLDIER
+        //&& (map.ruinTarget.enemyTiles > 0 || rc.getID() % 4 == 0)
+        && (rc.getID() % 4 <= 1 || !map.isPaintTower/* || rc.getNumberTowers() <= 5*/)
+        && doTowers() && !map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 8)) {
+      return new Target(map.ruinTarget.center, 1.0);
     }
 
     // Mopper/splasher: find enemy paint
@@ -115,36 +133,39 @@ public class Micro {
         }
       }
       if (best != null)
-        return best;
-    }
-
-    if (map.ruinTarget != null && bot.type == UnitType.MOPPER
-        && map.ruinTarget.enemyTiles > 0 && doTowers()) {
-      return map.ruinTarget.center;
+        return new Target(best, 1.0);
     }
 
     // Paint resupply - if nothing else important to do (for soldiers)
     if (map.closestPaintTower != null && bot.paint < 50 + rc.getType().attackCost) {
-      return map.closestPaintTower.loc;
+      return new Target(map.closestPaintTower.loc, 1.0);
     }
 
     // Exploration
+    return pickExploreTarget(bot);
+  }
+
+  static Target pickExploreTarget(MicroBot bot) {
     if (exploreTarget == null || exploreTarget.isWithinDistanceSquared(bot.startPos, 2)) {
       exploreTarget = map.findUnvisitedTile();
     }
     if (exploreTarget == null || exploreTarget.isWithinDistanceSquared(bot.startPos, 2)) {
       exploreTarget = new MapLocation(rng() % rc.getMapWidth(), rng() % rc.getMapHeight());
     }
-    return exploreTarget;
+    return new Target(exploreTarget, 1);
+  }
+
+  record Attack(double score,
+                MapLocation attackTarget,
+                Direction attackMopSwing) {
   }
 
   static class MicroLoc {
     MapLocation loc;
     double incomingDamage;
     double adjacentAllies;
-    double attackScore;
-    MapLocation attackTarget;
-    Direction attackMopSwing;
+    double transferScore;
+    Attack attack = new Attack(0.0, null, null);
     double[] mopSwingScores = new double[4];
     double score;
 
@@ -183,32 +204,37 @@ public class Micro {
     var damage = bot.type.attackStrength;
     var attack = (damage > 0 || isMopper) && bot.canAttack;
     var cost = bot.type.attackCost * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+
+    var mopSwingDamage = Math.min(5, bot.paint) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+    var mopDamage = (Math.min(10, bot.paint) + 5) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+
     for (var unit : nearbyEnemies) {
       // We can't attack it and it can't attack us
       if (unit.type.isTowerType() != targetTowers && (bot.type.isTowerType() == unit.type.isTowerType() && unit.type != UnitType.MOPPER))
         continue;
       for (var loc : locs) {
         if (attack && unit.type.isTowerType() == targetTowers && unit.location.isWithinDistanceSquared(loc.loc, attackDist)) {
-          double score;
+          double score = 0.0;
           if (isMopper) {
             score = Math.min(10, unit.paintAmount) * (1 - (double) unit.paintAmount / unit.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE + mopReturn;
             // TODO this isn't exactly correct - want it to match processTiles(), or do all this there but that would be more bt
             if (rc.senseMapInfo(unit.location).getPaint().isEnemy()) score += MAP_PAINT_VALUE;
-          } else {
+          } else {//if (bot.type != UnitType.SOLDIER || unit.health < unit.type.health / 2) {
             score = (double) Math.min(damage, unit.health) * ((1 - (double) unit.health / unit.type.health) + HP_FIXED_VALUE) * HP_TOTAL_VALUE;
             if (damage >= unit.health) score += KILL_VALUE;
             //score *= tyValues[unit.type.ordinal()];
             score -= cost;
           }
-          if (score > loc.attackScore) {
-            loc.attackScore = score;
-            loc.attackTarget = unit.location;
+          if (score > loc.attack.score) {
+            loc.attack = new Attack(score, unit.location, null);
           }
         }
         if ((bot.type.isTowerType() != unit.getType().isTowerType() || unit.type == UnitType.MOPPER)
             && ((unit.type.attackStrength > 0 || unit.type == UnitType.MOPPER) && unit.location.isWithinDistanceSquared(loc.loc, unit.type.actionRadiusSquared))) {
-          loc.incomingDamage += unit.type == UnitType.MOPPER ? (Math.min(10, bot.paint) + 5) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE
-              : (double) Math.min(bot.hp, unit.type.attackStrength) * ((1 - (double) bot.hp / bot.type.health) + HP_FIXED_VALUE) * HP_TOTAL_VALUE;
+          loc.incomingDamage += unit.type == UnitType.MOPPER ? mopDamage : (double) Math.min(bot.hp, unit.type.attackStrength) * ((1 - (double) bot.hp / bot.type.health) + HP_FIXED_VALUE) * HP_TOTAL_VALUE;
+        } else if (unit.type == UnitType.MOPPER && unit.location.isWithinDistanceSquared(loc.loc, 8)) {
+          // Mop swing distance
+          loc.incomingDamage += mopSwingDamage;
         }
         if (attack && isMopper && unit.type.isRobotType()) {
           for (int i = 0; i < 4; i++) {
@@ -229,50 +255,11 @@ public class Micro {
         for (int i = 0; i < 4; i++) {
           // Swinging has 20 cooldown, single-target mopping has 30, so adjust for the frequency at which we can do these actions
           loc.mopSwingScores[i] *= 3.0 / 2;
-          if (loc.mopSwingScores[i] > loc.attackScore) {
-            loc.attackMopSwing = Direction.cardinalDirections()[i];
-            loc.attackScore = loc.mopSwingScores[i];
-            loc.attackTarget = null;
+          if (loc.mopSwingScores[i] > loc.attack.score) {
+            loc.attack = new Attack(loc.mopSwingScores[i], null, Direction.cardinalDirections()[i]);
           }
         }
       }
-//      for (var loc : locs) {
-//        for (var dir : Direction.cardinalDirections()) {
-//          var score = 0.0;
-//          var l1 = loc.loc.add(dir);
-//          var l2 = l1.add(dir);
-//          var a = dir.rotateRight().rotateRight();
-//          var b = dir.rotateLeft().rotateLeft();
-//          Direction[] ds = {a, Direction.CENTER, b};
-//          for (var d : ds) {
-//            var l1_ = l1.add(d);
-//            var l2_ = l2.add(d);
-//            if (rc.canSenseRobotAtLocation(l1_)) {
-//              var unit = rc.senseRobotAtLocation(l1_);
-//              if (unit.team != rc.getTeam() && unit.type.isRobotType()) {
-//                score += Math.min(5, unit.paintAmount) * (1 - (double) unit.paintAmount / unit.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
-//                // no paint to mopper for swinging right? TODO verify
-//                // score += paint + Math.min(5, bot.type.paintCapacity - bot.paint) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
-//              }
-//            }
-//            if (rc.canSenseRobotAtLocation(l2_)) {
-//              var unit = rc.senseRobotAtLocation(l2_);
-//              if (unit.team != rc.getTeam() && unit.type.isRobotType()) {
-//                score += Math.min(5, unit.paintAmount) * (1 - (double) unit.paintAmount / unit.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
-//                // no paint to mopper for swinging right? TODO verify
-//                // score += paint + Math.min(5, bot.type.paintCapacity - bot.paint) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
-//              }
-//            }
-//          }
-//          // Swinging has 20 cooldown, single-target mopping has 30, so adjust for the frequency at which we can do these actions
-//          score *= 3.0 / 2;
-//          if (score > loc.attackScore) {
-//            loc.attackScore = score;
-//            loc.attackTarget = null;
-//            loc.attackMopSwing = dir;
-//          }
-//        }
-//      }
     }
   }
 
@@ -314,11 +301,10 @@ public class Micro {
         if (v > mscore) {
           mscore = 1000.0;
           for (var loc : locs) {
-            if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(l, 9)) {
-              loc.attackScore = v;
-              loc.attackTarget = l;
+            if (v > loc.attack.score && loc.loc.isWithinDistanceSquared(l, 9)) {
+              loc.attack = new Attack(v, l, null);
             }
-            if (loc.attackScore < mscore) mscore = loc.attackScore;
+            if (loc.attack.score < mscore) mscore = loc.attack.score;
           }
         }
       }
@@ -327,13 +313,12 @@ public class Micro {
         if (!tile.isPassable() || !tile.getPaint().isEnemy()) continue;
 
         var mtile = tiles[tile.getMapLocation().x][tile.getMapLocation().y];
-        var v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
+        var v = mtile != null && mtile.ruin != null ? 2 * MAP_PAINT_VALUE :
+            tile.getPaint().isSecondary() ? 1.5 * MAP_PAINT_VALUE : MAP_PAINT_VALUE;
 
         for (var loc : locs) {
-          if (v > loc.attackScore && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 2)) {
-            loc.attackScore = v;
-            loc.attackTarget = tile.getMapLocation();
-            loc.attackMopSwing = null;
+          if (v > loc.attack.score && loc.loc.isWithinDistanceSquared(tile.getMapLocation(), 2)) {
+            loc.attack = new Attack(v, tile.getMapLocation(), null);
           }
         }
       }
@@ -341,14 +326,18 @@ public class Micro {
   }
 
   static void processAttacks(MicroLoc[] locs, MicroBot bot) throws GameActionException {
-    var mopReady = bot.canAttack && bot.type == UnitType.MOPPER && bot.paint > 60;
+    var mopReady = bot.canAttack && bot.type == UnitType.MOPPER && bot.paint > 50 + MIN_TRANSFER_MOPPER;
     for (var unit : rc.senseNearbyRobots(bot.startPos, 8, rc.getTeam())) {
       for (var loc : locs) {
         if (unit.location.isWithinDistanceSquared(loc.loc, 2)) {
-          if (mopReady && unit.type.isRobotType() && (unit.getType() != UnitType.MOPPER || unit.paintAmount < 40) && unit.paintAmount <= unit.type.paintCapacity - 10) {
+          if (mopReady && unit.type.isRobotType() && (unit.getType() != UnitType.MOPPER || unit.paintAmount < 40) && unit.paintAmount <= unit.type.paintCapacity - MIN_TRANSFER_MOPPER) {
+            //loc.transferScore = (bot.paint - 50) * (1 - (double) unit.paintAmount / unit.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
             mopReady = false;
-          } else if (unit.type.isRobotType() || bot.paint >= minPaint() + 50 || unit.paintAmount < 50) {
+          } else if (unit.type.isRobotType() || bot.paint >= minPaint() + MIN_TRANSFER_TOWER || unit.paintAmount < TOWER_KEEP_PAINT + MIN_TRANSFER_TOWER) {
             loc.adjacentAllies += 1;
+          } else {
+            // transfer target
+            loc.transferScore = (unit.paintAmount - TOWER_KEEP_PAINT) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
           }
         }
       }
@@ -376,6 +365,9 @@ public class Micro {
   static MapLocation lastTarget;
   static int rlCounter;
 
+  static Attack stayAttack;
+  static int exploreTurns = 0;
+
   static MicroLoc findBestLoc(MicroBot bot, boolean includeCenter) throws GameActionException {
     var locs = new MicroLoc[]{new MicroLoc(bot.startPos)};
     if (bot.canMove && bot.type.isRobotType()) {
@@ -400,11 +392,17 @@ public class Micro {
       }
     }
     bfAttack = Clock.getBytecodeNum();
-    var target = pickTarget(bot);
-    if (target != null) {
-      rc.setIndicatorLine(bot.startPos, target, 0, 0, 255);
-      if (!target.equals(lastTarget)) {
-        lastTarget = target;
+    Target target;
+    if (exploreTurns > 0) {
+      target = pickExploreTarget(bot);
+      exploreTurns -= 1;
+    } else {
+      target = pickTarget(bot);
+    }
+    if (target.loc != null) {
+      rc.setIndicatorLine(bot.startPos, target.loc, 0, 0, 255);
+      if (!target.loc.equals(lastTarget)) {
+        lastTarget = target.loc;
         recentLocs.clear();
       }
     }
@@ -413,24 +411,31 @@ public class Micro {
     bfScore = Clock.getBytecodeNum();
     var pmul = bot.type == UnitType.MOPPER ? 2 : 1;
     MicroLoc best = null;
-    var pTargetDist = target != null ? bot.startPos.distanceSquaredTo(target) : 0;
+    var pTargetDist = target.loc != null ? bot.startPos.distanceSquaredTo(target.loc) : 0;
     var totalNearby = nearbyAllies.length + nearbyEnemies.length + 2;
     // 0.9-1.1? we can adjust numbers. they start out at 0-1 so
     var attackMult = ((double) nearbyAllies.length + 1) / totalNearby * 0.4 + 0.8;
     var defenseMult = ((double) nearbyEnemies.length + 1) / totalNearby * 0.4 + 0.8;
+    stayAttack = new Attack(0.0, null, null);
+    for (var loc : locs) {
+      if (loc.loc.equals(bot.startPos)) {
+        stayAttack = loc.attack;
+      }
+    }
     var tmult = 0.1;//rc.getRoundNum() > 400 ? 0.01 : 0.1;
     for (var loc : locs) {
-      var score = loc.attackScore * attackMult - loc.incomingDamage * defenseMult;
-//      for (var i = 0; i < rtargets.length; i++) {
-//        var target = rtargets[i];//.fun().get();
-//        //if (target.isEmpty()) continue;
-//        score -= target.distanceSquaredTo(loc.loc) * 0.1 * (double) (rtargets.length - i) / rtargets.length;
-//      }
-      if (target != null) {
-        score -= (target.distanceSquaredTo(loc.loc) - pTargetDist) * tmult;// * (double) (rtargets.length - i) / rtargets.length;
+      var score = Math.max(loc.attack.score, stayAttack.score) * attackMult - loc.incomingDamage * defenseMult;
+      if (target.loc != null) {
+        score -= (target.loc.distanceSquaredTo(loc.loc) - pTargetDist) * tmult * target.score;// * (double) (rtargets.length - i) / rtargets.length;
+        //score -= Math.sqrt(target.distanceSquaredTo(loc.loc)) * tmult;
       }
-      if (loc.attackScore == 0.0 && recentLocs.contains(loc.loc)) {
+      if (loc.attack.score == 0.0 && stayAttack.score == 0.0 && recentLocs.contains(loc.loc)) {
         score -= (rlCounter + 1) * 0.2;
+        if (loc.loc.equals(bot.startPos)) {
+          score -= (rlCounter + 1) * 0.05;
+        }
+        //score -= 10 * tmult;
+        rc.setIndicatorDot(loc.loc, 0, 255, 0);
       }
       var paint = rc.senseMapInfo(loc.loc).getPaint();
       if (paint.isEnemy())
@@ -444,49 +449,64 @@ public class Micro {
     return best;
   }
 
+  static void doAttack(Attack attack) throws GameActionException {
+    // always do this
+    if (rc.getType() == UnitType.SOLDIER && rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY) {
+      var s = map.tile(rc.getLocation()).secondary();
+      rc.attack(rc.getLocation(), s);
+    } else if (attack.score > 0.0) {
+      if (attack.attackMopSwing != null) {
+        rc.mopSwing(attack.attackMopSwing);
+      } else {
+        rc.setIndicatorDot(attack.attackTarget, 0, 0, 0);
+        var s = map.tile(attack.attackTarget).secondary();
+        if (rc.canAttack(attack.attackTarget)) {
+          rc.attack(attack.attackTarget, s);
+        }
+      }
+      recentLocs.clear();
+    }
+  }
+
   static void doMicro() throws GameActionException {
     var start = Clock.getBytecodeNum();
     if (rc.getType().isTowerType()) {
       rc.attack(null);
     }
-    var loc = findBestLoc(new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady(), rc.getPaint(), rc.getHealth()), true);
+    var bot = new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() > 0 && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady(), rc.getPaint(), rc.getHealth());
+    var loc = findBestLoc(bot, true);
     if (!loc.loc.equals(rc.getLocation())) {
       if (recentLocs.contains(loc.loc)) rlCounter += 1;
-      else rlCounter = 0;
+      else {
+        if (recentLocs.size() >= 12) {
+          recentLocs.removeFirst();
+        }
+        recentLocs.addLast(loc.loc);
+        rlCounter = 0;
+      }
 
-      if (recentLocs.size() >= 12) recentLocs.removeFirst();
-      recentLocs.addLast(rc.getLocation());
+      // Attack before moving if advantageous
+      if (stayAttack.score > 0.0 && stayAttack.score > loc.attack.score) {
+        doAttack(stayAttack);
+      }
 
       if (rc.canMove(rc.getLocation().directionTo(loc.loc))) {
         rc.move(rc.getLocation().directionTo(loc.loc));
       }
     } else if (rc.isMovementReady()) {
-      if (recentLocs.size() >= 12) recentLocs.removeFirst();
-      recentLocs.addLast(rc.getLocation());
       rlCounter += 1;
       exploreTarget = null;
-    }
-    // always do this
-    if (rc.getType() == UnitType.SOLDIER && rc.isActionReady() && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.senseMapInfo(rc.getLocation()).getPaint() == PaintType.EMPTY) {
-      var s = map.tile(rc.getLocation()).secondary();
-      rc.attack(rc.getLocation(), s);
-    } else if (loc.attackScore > 0.0) {
-      if (loc.attackMopSwing != null) {
-        //System.out.println("swinging mop !!!!! " + loc.attackMopSwing + ": " + loc.attackScore);
-        rc.mopSwing(loc.attackMopSwing);
-      } else {
-        //rc.setIndicatorString("" + loc.attackScore + ": " + loc.attackTarget);
-        rc.setIndicatorDot(loc.attackTarget, 0, 0, 0);
-        var s = map.tile(loc.attackTarget).secondary();
-        if (rc.canAttack(loc.attackTarget)) {
-          rc.attack(loc.attackTarget, s);
-        }
-        recentLocs.clear();
+      if (rlCounter > 20) {
+        exploreTurns = 10;
       }
     }
+    // always do this
+    if (rc.isActionReady()) {
+      doAttack(loc.attack);
+    }
     var end = Clock.getBytecodeNum();
-    rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
-    //rc.setIndicatorString("rlcounter: " + rlCounter);
+    //rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
+    rc.setIndicatorString("rlcounter: " + rlCounter + " / " + exploreTurns);
   }
 }
 

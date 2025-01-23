@@ -7,15 +7,11 @@ import java.util.ArrayList;
 import static immanentize.RobotPlayer.*;
 
 public class Map {
-  public static Team paintTeam(PaintType paint) {
-    return paint.isAlly() ? rc.getTeam() :
-        paint.isEnemy() ? rc.getTeam().opponent() : null;
-  }
-
   public class Ruin {
     public MapLocation center;
     public int allyTiles;
     public int enemyTiles;
+    public boolean clearEnemyTilesOnSeen = false;
     public int roundSeen;
     public UnitType type;
     public int typeRound;
@@ -26,18 +22,19 @@ public class Map {
 
     public UnitType type() throws GameActionException {
       if (typeRound == rc.getRoundNum()) return type;
-      var big = rc.getMapHeight() >= 30 || rc.getMapWidth() >= 30;
       typeRound = rc.getRoundNum();
-      type = (hash(center) % 7) >= (big ? 2 : 3) ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
-      if (rc.getChips() > 10000) type = UnitType.LEVEL_ONE_PAINT_TOWER;
+      var big = rc.getMapHeight() >= 30 || rc.getMapWidth() >= 30;
+
+      var paintPercent = big ? 20 : 30;
+      if (!map.isPaintTower) paintPercent = 100;
       // money tower first ?
-      if (rc.getNumberTowers() <= 2) {
-          type = UnitType.LEVEL_ONE_MONEY_TOWER;
-      }
+      if (rc.getNumberTowers() <= 2) paintPercent = 0;
       // then paint tower
-      if (rc.getNumberTowers() == 3 && !big) type = UnitType.LEVEL_ONE_PAINT_TOWER;
-//      if (rc.getRoundNum() >= 150 && rc.getNumberTowers() > 3 && (hash(center) % 5) == 0)
-//        type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
+      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
+      if (rc.getChips() > 10000) paintPercent = 100;
+
+      type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
+
       if (rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
       }
@@ -50,6 +47,10 @@ public class Map {
     }
 
     public void update() throws GameActionException {
+      if (clearEnemyTilesOnSeen && rc.getLocation().isWithinDistanceSquared(center, 9)) {
+        enemyTiles -= 1;
+        clearEnemyTilesOnSeen = false;
+      }
       var us = rc.getTeam();
       var them = us.opponent();
       for (var loc : rc.senseNearbyMapInfos(center, 8)) {
@@ -97,9 +98,10 @@ public class Map {
     }
 
     public void update() throws GameActionException {
-      if (!completed && rc.canSenseLocation(center) && rc.senseMapInfo(center).isResourcePatternCenter()) {
+      if (!rc.canSenseLocation(center)) return;
+      if (!completed && rc.senseMapInfo(center).isResourcePatternCenter()) {
         completed = true;
-      } else if (!completed && rc.canSenseLocation(center) && rc.senseMapInfo(center).getMark() != PaintType.ALLY_PRIMARY) {
+      } else if (!completed && rc.senseMapInfo(center).getMark() != PaintType.ALLY_PRIMARY) {
         // if somebody removed the mark it was bc this rp didnt work anymore
         if (closestRP == this) closestRP = null;
         removeRP(this);
@@ -108,6 +110,8 @@ public class Map {
           rc.completeResourcePattern(center);
           completed = true;
         }
+      } else if (completed && !rc.senseMapInfo(center).isResourcePatternCenter()) {
+        completed = false;
       }
     }
   }
@@ -148,6 +152,7 @@ public class Map {
   public ArrayList<ResourcePattern> rps = new ArrayList<>();
   public Ruin ruinTarget;
   public Tower closestPaintTower;
+  public Tower closestFriendlyTower;
   public boolean isPaintTower;
   public Tower closestEnemyTower;
   public ResourcePattern closestRP;
@@ -161,7 +166,7 @@ public class Map {
   public MapLocation findUnvisitedTile() {
     int bx = 0, by = 0;
     int best = 3000;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 8; i++) {
       int cx = rng() % (width / 5), cy = rng() % (height / 5);
       var t = visitedTiles[cx][cy];
       if (t < best) {
@@ -275,7 +280,7 @@ public class Map {
       var ruin = tryAddRuin(ruinLoc, rc.getRoundNum());
       ruin.update();
       if (ruin.allyTiles == 24) {
-        if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && rc.canMark(ruinLoc.add(Direction.NORTH))) {
+        if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && (rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly() || rc.canMark(ruinLoc.add(Direction.NORTH)))) {
           rc.completeTowerPattern(ruin.type(), ruinLoc);
           rc.setTimelineMarker("Tower built", 0, 255, 0);
           rc.mark(ruinLoc.add(Direction.NORTH), /*rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly()*/ true);
@@ -290,14 +295,20 @@ public class Map {
     }
 
     ruinTarget = null;
+    var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
     if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
       for (var ruin : ruins) {
-        if ((rc.getType() == UnitType.MOPPER || ruin.enemyTiles == 0) &&
-            (ruinTarget == null
-                //|| ruin.allyTiles > ruinTarget.allyTiles
-                || ruin.center.isWithinDistanceSquared(rc.getLocation(), ruinTarget.center.distanceSquaredTo(rc.getLocation())))) {
-          rc.setIndicatorDot(ruin.center, 255, 255, 255);
-          ruinTarget = ruin;
+        if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0) &&
+            (rc.getType() == UnitType.SOLDIER || ruin.enemyTiles > 0 || rc.getID() % 4 == 0) &&
+            (rc.getType() != UnitType.SPLASHER || ruin.enemyTiles >= 3 || ruin.clearEnemyTilesOnSeen || rc.getID() % 4 == 0)) {
+          var d = ruin.center.distanceSquaredTo(rc.getLocation());
+          if (d < bestD) {
+            rc.setIndicatorDot(ruin.center, 255, 255, 255);
+            ruinTarget = ruin;
+            bestD = d;
+          } else {
+            rc.setIndicatorDot(ruin.center, 255, 0, 255);
+          }
         } else {
           rc.setIndicatorDot(ruin.center, 255, 0, 255);
         }
@@ -309,7 +320,7 @@ public class Map {
     isPaintTower = false;
     for (var tower : towers) {
       rc.setIndicatorDot(tower.loc, 255, 0, 0);
-      if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= 50))) {
+      if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= TOWER_KEEP_PAINT + MIN_TRANSFER_TOWER))) {
         if (!isPaintTower && tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) isPaintTower = true;
         if (closestPaintTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestPaintTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestPaintTower = tower;
@@ -319,11 +330,16 @@ public class Map {
         if (closestEnemyTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestEnemyTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestEnemyTower = tower;
         }
+      } else {
+        if (closestFriendlyTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestFriendlyTower.loc.distanceSquaredTo(rc.getLocation()))) {
+          closestFriendlyTower = tower;
+        }
       }
     }
 
     if (rc.getType() == UnitType.SOLDIER) {
       closestRP = null;
+      if (tile(rc.getLocation()).rp != null) tile(rc.getLocation()).rp.update();
       if (tile(rc.getLocation()).rp != null && !tile(rc.getLocation()).rp.completed) {
         closestRP = tile(rc.getLocation()).rp;
       } else {
