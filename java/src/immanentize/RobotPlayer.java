@@ -94,6 +94,8 @@ public class RobotPlayer {
   static int spawnCount = 0;
   static boolean panicMode = false;
   static MapLocation panicTarget = null;
+  static int nearbyFriendlySoldiers;
+  static int splasherStartTurn = -1;
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
@@ -128,6 +130,13 @@ public class RobotPlayer {
             }
           }
           panicMode = nearbySoldiers >= 2 || (nearbySoldiers == 1 && rc.getHealth() < rc.getType().health / 3);
+
+          nearbyFriendlySoldiers = 0;
+          for (var i : nearbyAllies) {
+            if (i.type == UnitType.SOLDIER) {
+              nearbyFriendlySoldiers += 1;
+            }
+          }
         }
 
         map.update();
@@ -193,7 +202,7 @@ public class RobotPlayer {
               if (toSpawn == null && (nearbyAllies.length < 12)) {
                 var splasherChance = 1.0 / 8.0;
                 // after splashers have been ruled out
-                var mopperChance = 2.0 / 6.0;
+                var mopperChance = 1.0 / 5.0;
                 // More splashers on bigger maps
                 if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
                   splasherChance = 1.0 / 5.0;
@@ -210,9 +219,21 @@ public class RobotPlayer {
                   splasherChance = 0;
                 }
                 if (rc.getNumberTowers() > map.moneyTarget) {
-                  splasherChance = 1 / 2.0;
-                  mopperChance = 1 / 2.0;
+                  if (splasherStartTurn == -1) splasherStartTurn = rc.getRoundNum();
+                  if (rc.getRoundNum() > splasherStartTurn + 20) {
+                    splasherChance = 3 / 5.0;
+                    mopperChance = 2 / 5.0;
+                  } else {
+                    splasherChance = 2 / 3.0;
+                    mopperChance = 1 / 2.0;
+                  }
+                } else {
+                  splasherStartTurn = -1;
                 }
+//                if (nearbyAllies.length > 4 && nearbyFriendlySoldiers <= 1) {
+//                  splasherChance *= 0.8;
+//                  mopperChance *= 0.8;
+//                }
 //                if (rc.getRoundNum() > 300) {
 //                  mopperChance = 2.0 / 5.0;
 //                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {

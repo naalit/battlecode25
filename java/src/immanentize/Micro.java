@@ -114,7 +114,7 @@ public class Micro {
     if (map.ruinTarget != null && bot.type != UnitType.SOLDIER
         //&& (map.ruinTarget.enemyTiles > 0 || rc.getID() % 4 == 0)
         && (rc.getID() % 4 <= 1 || !map.isPaintTower/* || rc.getNumberTowers() <= 5*/)
-        && doTowers() && !map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 8)) {
+        /*&& doTowers()*/ && !map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 8)) {
       return new Target(map.ruinTarget.center, 1.0);
     }
 
@@ -219,7 +219,7 @@ public class Micro {
             score = Math.min(10, unit.paintAmount) * (1 - (double) unit.paintAmount / unit.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE + mopReturn;
             // TODO this isn't exactly correct - want it to match processTiles(), or do all this there but that would be more bt
             if (rc.senseMapInfo(unit.location).getPaint().isEnemy()) score += MAP_PAINT_VALUE;
-          } else {//if (bot.type != UnitType.SOLDIER || unit.health < unit.type.health / 2) {
+          } else if (bot.type != UnitType.SOLDIER || unit.health < unit.type.health / 2 || nearbyAllies.length > 0 /*|| unit.type.getBaseType() != UnitType.LEVEL_ONE_DEFENSE_TOWER*/) {
             score = (double) Math.min(damage, unit.health) * ((1 - (double) unit.health / unit.type.health) + HP_FIXED_VALUE) * HP_TOTAL_VALUE;
             if (damage >= unit.health) score += KILL_VALUE;
             //score *= tyValues[unit.type.ordinal()];

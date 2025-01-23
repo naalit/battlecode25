@@ -40,6 +40,9 @@ public class Map {
 //      // then paint tower
 //      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
 //      if (rc.getChips() > 10000) paintPercent = 100;
+      if (!map.isPaintTower && map.towers.size() > 2) {
+        paintPercent = 80;
+      }
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
@@ -194,7 +197,7 @@ public class Map {
     tiles = new Tile[width][];
     resourcePattern = rc.getResourcePattern();
 
-    moneyTarget = 4;
+    moneyTarget = 5;
     if (height < 30 || width < 30) moneyTarget = 2;
     if (height >= 35 && width >= 35) moneyTarget = 6;
   }
@@ -312,11 +315,11 @@ public class Map {
     var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
     if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
       for (var ruin : ruins) {
-        if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0) &&
+        if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0 || (rc.getNumberTowers() > 4 && rc.getID() % 7 < 2)) &&
             (rc.getType() == UnitType.SOLDIER || ruin.enemyTiles > 0 || rc.getID() % 4 == 0) &&
             (rc.getType() != UnitType.SPLASHER || ruin.enemyTiles >= 3 || ruin.clearEnemyTilesOnSeen || rc.getID() % 4 == 0)) {
           var d = ruin.center.distanceSquaredTo(rc.getLocation());
-          if (d < bestD) {
+          if (d < bestD || (rc.getType() != UnitType.SOLDIER && ruinTarget != null && ruinTarget.enemyTiles > 0 && ruin.enemyTiles == 0)) {
             rc.setIndicatorDot(ruin.center, 255, 255, 255);
             ruinTarget = ruin;
             bestD = d;
