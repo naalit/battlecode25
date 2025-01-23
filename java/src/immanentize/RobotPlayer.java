@@ -209,21 +209,25 @@ public class RobotPlayer {
                 if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 80) {
                   splasherChance = 0;
                 }
-                if (rc.getRoundNum() > 300) {
-                  mopperChance = 2.0 / 5.0;
-                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
-                    splasherChance = 1 / 4.0;
-                  } else {
-                    splasherChance = 1 / 5.0;
-                  }
+                if (rc.getNumberTowers() > map.moneyTarget) {
+                  splasherChance = 1 / 2.0;
+                  mopperChance = 1 / 2.0;
                 }
-                if (rc.getRoundNum() > 600) {
-                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
-                    splasherChance = 1 / 3.0;
-                  } else {
-                    splasherChance = 1 / 4.0;
-                  }
-                }
+//                if (rc.getRoundNum() > 300) {
+//                  mopperChance = 2.0 / 5.0;
+//                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
+//                    splasherChance = 1 / 4.0;
+//                  } else {
+//                    splasherChance = 1 / 5.0;
+//                  }
+//                }
+//                if (rc.getRoundNum() > 600) {
+//                  if (rc.getMapHeight() >= 40 && rc.getMapWidth() >= 40) {
+//                    splasherChance = 1 / 3.0;
+//                  } else {
+//                    splasherChance = 1 / 4.0;
+//                  }
+//                }
 
                 toSpawn = (double) (rng() % 100) < splasherChance * 100.0 ? UnitType.SPLASHER
                     : rng() % 100 < mopperChance * 100.0 ? UnitType.MOPPER

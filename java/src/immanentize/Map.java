@@ -23,15 +23,23 @@ public class Map {
     public UnitType type() throws GameActionException {
       if (typeRound == rc.getRoundNum()) return type;
       typeRound = rc.getRoundNum();
-      var big = rc.getMapHeight() >= 30 || rc.getMapWidth() >= 30;
 
-      var paintPercent = big ? 20 : 30;
-      if (!map.isPaintTower) paintPercent = 100;
-      // money tower first ?
-      if (rc.getNumberTowers() <= 2) paintPercent = 0;
-      // then paint tower
-      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
-      if (rc.getChips() > 10000) paintPercent = 100;
+      var paintPercent = rc.getNumberTowers() < moneyTarget + 1 ? 0 : 80;
+//      if (rc.getNumberTowers() < moneyTarget + 1) {
+//        type = UnitType.LEVEL_ONE_MONEY_TOWER;
+//      } else {
+//        type = UnitType.LEVEL_ONE_PAINT_TOWER;
+//      }
+//      var big = rc.getMapHeight() >= 30 || rc.getMapWidth() >= 30;
+//      var big2 = rc.getMapHeight() >= 35 && rc.getMapWidth() >= 35;
+//
+//      var paintPercent = big ? 20 : 30;
+//      if (!map.isPaintTower) paintPercent = 100;
+//      // money tower first ?
+//      if (rc.getNumberTowers() <= (big ? big2 ? 5 : 4 : 2)) paintPercent = 0;
+//      // then paint tower
+//      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
+//      if (rc.getChips() > 10000) paintPercent = 100;
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
@@ -178,11 +186,17 @@ public class Map {
     return best == 3000 ? null : new MapLocation(bx * 5 + 3, by * 5 + 3);
   }
 
+  public int moneyTarget;
+
   public Map() {
     height = rc.getMapHeight();
     width = rc.getMapWidth();
     tiles = new Tile[width][];
     resourcePattern = rc.getResourcePattern();
+
+    moneyTarget = 4;
+    if (height < 30 || width < 30) moneyTarget = 2;
+    if (height >= 35 && width >= 35) moneyTarget = 6;
   }
 
   public Tile tile(MapLocation loc) {
