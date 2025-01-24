@@ -78,7 +78,7 @@ public class PathHelper {
   static int _v_8_4;
   static int _v_8_5;
   static int _v_8_6;
-  static boolean[] occupied;
+  static boolean[] invalid;
   static int[] robotCosts;
   
   static final Direction[] ORDERED_DIRECTIONS = {
@@ -163,854 +163,711 @@ public class PathHelper {
     _v_8_5 = 100000 << 3;
     _v_8_6 = 100000 << 3;
     var at = rc.getLocation();
+    invalid = new boolean[121];
     robotCosts = new int[121];
     
     for (var r : rc.senseNearbyRobots(9)) {
       var x = r.location.x - at.x;
       var y = r.location.y - at.y;
-      robotCosts[(5 + x) * 11 + 5 + y] = 100000;
+      invalid[(5 + x) * 11 + 5 + y] = true;
       if (r.getTeam() == rc.getTeam()) {
         for (int dx = -1; dx <= 1; dx++) {
           for (int dy = -1; dy <= 1; dy++) {
             if ((dx != 0 || dy != 0) && (x+dx)*(x+dx) + (y+dy)*(y+dy) <= 9) {
-              robotCosts[(5 + x + dx) * 11 + 5 + y + dy] += 1;
+              robotCosts[(5 + x + dx) * 11 + 5 + y + dy] += 1 << 3;
             }
           }
         }
       }
     }
     
+    var height = rc.getMapHeight();
+    var width = rc.getMapWidth();
+    if (at.x - 4 < 0) {
+      invalid[12] = true;
+      invalid[13] = true;
+      invalid[14] = true;
+      invalid[15] = true;
+      invalid[16] = true;
+      invalid[17] = true;
+      invalid[18] = true;
+      invalid[19] = true;
+      invalid[20] = true;
+    }
+    if (at.x + 4 >= width) {
+      invalid[100] = true;
+      invalid[101] = true;
+      invalid[102] = true;
+      invalid[103] = true;
+      invalid[104] = true;
+      invalid[105] = true;
+      invalid[106] = true;
+      invalid[107] = true;
+      invalid[108] = true;
+    }
+    if (at.y - 4 < 0) {
+      invalid[12] = true;
+      invalid[23] = true;
+      invalid[34] = true;
+      invalid[45] = true;
+      invalid[56] = true;
+      invalid[67] = true;
+      invalid[78] = true;
+      invalid[89] = true;
+      invalid[100] = true;
+    }
+    if (at.y + 4 >= height) {
+      invalid[20] = true;
+      invalid[31] = true;
+      invalid[42] = true;
+      invalid[53] = true;
+      invalid[64] = true;
+      invalid[75] = true;
+      invalid[86] = true;
+      invalid[97] = true;
+      invalid[108] = true;
+    }
+    if (at.x - 3 < 0) {
+      invalid[23] = true;
+      invalid[24] = true;
+      invalid[25] = true;
+      invalid[26] = true;
+      invalid[27] = true;
+      invalid[28] = true;
+      invalid[29] = true;
+      invalid[30] = true;
+      invalid[31] = true;
+    }
+    if (at.x + 3 >= width) {
+      invalid[89] = true;
+      invalid[90] = true;
+      invalid[91] = true;
+      invalid[92] = true;
+      invalid[93] = true;
+      invalid[94] = true;
+      invalid[95] = true;
+      invalid[96] = true;
+      invalid[97] = true;
+    }
+    if (at.y - 3 < 0) {
+      invalid[13] = true;
+      invalid[24] = true;
+      invalid[35] = true;
+      invalid[46] = true;
+      invalid[57] = true;
+      invalid[68] = true;
+      invalid[79] = true;
+      invalid[90] = true;
+      invalid[101] = true;
+    }
+    if (at.y + 3 >= height) {
+      invalid[19] = true;
+      invalid[30] = true;
+      invalid[41] = true;
+      invalid[52] = true;
+      invalid[63] = true;
+      invalid[74] = true;
+      invalid[85] = true;
+      invalid[96] = true;
+      invalid[107] = true;
+    }
+    if (at.x - 2 < 0) {
+      invalid[34] = true;
+      invalid[35] = true;
+      invalid[36] = true;
+      invalid[37] = true;
+      invalid[38] = true;
+      invalid[39] = true;
+      invalid[40] = true;
+      invalid[41] = true;
+      invalid[42] = true;
+    }
+    if (at.x + 2 >= width) {
+      invalid[78] = true;
+      invalid[79] = true;
+      invalid[80] = true;
+      invalid[81] = true;
+      invalid[82] = true;
+      invalid[83] = true;
+      invalid[84] = true;
+      invalid[85] = true;
+      invalid[86] = true;
+    }
+    if (at.y - 2 < 0) {
+      invalid[14] = true;
+      invalid[25] = true;
+      invalid[36] = true;
+      invalid[47] = true;
+      invalid[58] = true;
+      invalid[69] = true;
+      invalid[80] = true;
+      invalid[91] = true;
+      invalid[102] = true;
+    }
+    if (at.y + 2 >= height) {
+      invalid[18] = true;
+      invalid[29] = true;
+      invalid[40] = true;
+      invalid[51] = true;
+      invalid[62] = true;
+      invalid[73] = true;
+      invalid[84] = true;
+      invalid[95] = true;
+      invalid[106] = true;
+    }
+    if (at.x - 1 < 0) {
+      invalid[45] = true;
+      invalid[46] = true;
+      invalid[47] = true;
+      invalid[48] = true;
+      invalid[49] = true;
+      invalid[50] = true;
+      invalid[51] = true;
+      invalid[52] = true;
+      invalid[53] = true;
+    }
+    if (at.x + 1 >= width) {
+      invalid[67] = true;
+      invalid[68] = true;
+      invalid[69] = true;
+      invalid[70] = true;
+      invalid[71] = true;
+      invalid[72] = true;
+      invalid[73] = true;
+      invalid[74] = true;
+      invalid[75] = true;
+    }
+    if (at.y - 1 < 0) {
+      invalid[15] = true;
+      invalid[26] = true;
+      invalid[37] = true;
+      invalid[48] = true;
+      invalid[59] = true;
+      invalid[70] = true;
+      invalid[81] = true;
+      invalid[92] = true;
+      invalid[103] = true;
+    }
+    if (at.y + 1 >= height) {
+      invalid[17] = true;
+      invalid[28] = true;
+      invalid[39] = true;
+      invalid[50] = true;
+      invalid[61] = true;
+      invalid[72] = true;
+      invalid[83] = true;
+      invalid[94] = true;
+      invalid[105] = true;
+    }
     if (rc.canMove(Direction.SOUTHWEST)) {
       var loc = at.translate(-1, -1);
-      _v_3_3 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[48]) << 3) | 0;
+      _v_3_3 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[48]) | 0;
     }
     if (rc.canMove(Direction.WEST)) {
       var loc = at.translate(-1, 0);
-      _v_3_4 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[49]) << 3) | 1;
+      _v_3_4 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[49]) | 1;
     }
     if (rc.canMove(Direction.NORTHWEST)) {
       var loc = at.translate(-1, 1);
-      _v_3_5 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[50]) << 3) | 2;
+      _v_3_5 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[50]) | 2;
     }
     if (rc.canMove(Direction.SOUTH)) {
       var loc = at.translate(0, -1);
-      _v_4_3 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[59]) << 3) | 3;
+      _v_4_3 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[59]) | 3;
     }
     if (rc.canMove(Direction.NORTH)) {
       var loc = at.translate(0, 1);
-      _v_4_5 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[61]) << 3) | 4;
+      _v_4_5 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[61]) | 4;
     }
     if (rc.canMove(Direction.SOUTHEAST)) {
       var loc = at.translate(1, -1);
-      _v_5_3 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[70]) << 3) | 5;
+      _v_5_3 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[70]) | 5;
     }
     if (rc.canMove(Direction.EAST)) {
       var loc = at.translate(1, 0);
-      _v_5_4 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[71]) << 3) | 6;
+      _v_5_4 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[71]) | 6;
     }
     if (rc.canMove(Direction.NORTHEAST)) {
       var loc = at.translate(1, 1);
-      _v_5_5 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[72]) << 3) | 7;
+      _v_5_5 = ((switch (rc.senseMapInfo(loc).getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3 + robotCosts[72]) | 7;
     }
   }
   static void pathIter() throws GameActionException {
     var at = rc.getLocation();
-    {
-      var loc = at.translate(0, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[60]) << 3;
-      }
-    }
-    {
-      var loc = at.translate(0, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[60]) << 3;
-      }
-    }
-    {
-      var loc = at.translate(-1, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[50]) << 3;
-        _v_3_5 = Math.min(_v_3_5, _v_3_4 + cost);
-        _v_3_5 = Math.min(_v_3_5, _v_4_4 + cost);
-        _v_3_5 = Math.min(_v_3_5, _v_4_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[48]) << 3;
-        _v_3_3 = Math.min(_v_3_3, _v_3_4 + cost);
-        _v_3_3 = Math.min(_v_3_3, _v_4_3 + cost);
-        _v_3_3 = Math.min(_v_3_3, _v_4_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[49]) << 3;
-        _v_3_4 = Math.min(_v_3_4, _v_3_3 + cost);
-        _v_3_4 = Math.min(_v_3_4, _v_3_5 + cost);
-        _v_3_4 = Math.min(_v_3_4, _v_4_3 + cost);
-        _v_3_4 = Math.min(_v_3_4, _v_4_4 + cost);
-        _v_3_4 = Math.min(_v_3_4, _v_4_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[71]) << 3;
-        _v_5_4 = Math.min(_v_5_4, _v_4_3 + cost);
-        _v_5_4 = Math.min(_v_5_4, _v_4_4 + cost);
-        _v_5_4 = Math.min(_v_5_4, _v_4_5 + cost);
-        _v_5_4 = Math.min(_v_5_4, _v_5_3 + cost);
-        _v_5_4 = Math.min(_v_5_4, _v_5_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[61]) << 3;
-        _v_4_5 = Math.min(_v_4_5, _v_3_4 + cost);
-        _v_4_5 = Math.min(_v_4_5, _v_3_5 + cost);
-        _v_4_5 = Math.min(_v_4_5, _v_4_4 + cost);
-        _v_4_5 = Math.min(_v_4_5, _v_5_4 + cost);
-        _v_4_5 = Math.min(_v_4_5, _v_5_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[59]) << 3;
-        _v_4_3 = Math.min(_v_4_3, _v_3_3 + cost);
-        _v_4_3 = Math.min(_v_4_3, _v_3_4 + cost);
-        _v_4_3 = Math.min(_v_4_3, _v_4_4 + cost);
-        _v_4_3 = Math.min(_v_4_3, _v_5_3 + cost);
-        _v_4_3 = Math.min(_v_4_3, _v_5_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[72]) << 3;
-        _v_5_5 = Math.min(_v_5_5, _v_4_4 + cost);
-        _v_5_5 = Math.min(_v_5_5, _v_4_5 + cost);
-        _v_5_5 = Math.min(_v_5_5, _v_5_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[70]) << 3;
-        _v_5_3 = Math.min(_v_5_3, _v_4_3 + cost);
-        _v_5_3 = Math.min(_v_5_3, _v_4_4 + cost);
-        _v_5_3 = Math.min(_v_5_3, _v_5_4 + cost);
-      }
+    if (!invalid[50]) {
+      var tile = rc.senseMapInfo(at.translate(-1, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[50];
+        _v_3_5 = Math.min(Math.min(Math.min(_v_3_5 - cost, _v_3_4), _v_4_4), _v_4_5) + cost;
+      }
+    }
+    if (!invalid[48]) {
+      var tile = rc.senseMapInfo(at.translate(-1, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[48];
+        _v_3_3 = Math.min(Math.min(Math.min(_v_3_3 - cost, _v_3_4), _v_4_3), _v_4_4) + cost;
+      }
+    }
+    if (!invalid[49]) {
+      var tile = rc.senseMapInfo(at.translate(-1, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[49];
+        _v_3_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_4 - cost, _v_3_3), _v_3_5), _v_4_3), _v_4_4), _v_4_5) + cost;
+      }
+    }
+    if (!invalid[71]) {
+      var tile = rc.senseMapInfo(at.translate(1, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[71];
+        _v_5_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_4 - cost, _v_4_3), _v_4_4), _v_4_5), _v_5_3), _v_5_5) + cost;
+      }
+    }
+    if (!invalid[61]) {
+      var tile = rc.senseMapInfo(at.translate(0, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[61];
+        _v_4_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_5 - cost, _v_3_4), _v_3_5), _v_4_4), _v_5_4), _v_5_5) + cost;
+      }
+    }
+    if (!invalid[59]) {
+      var tile = rc.senseMapInfo(at.translate(0, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[59];
+        _v_4_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_3 - cost, _v_3_3), _v_3_4), _v_4_4), _v_5_3), _v_5_4) + cost;
+      }
+    }
+    if (!invalid[72]) {
+      var tile = rc.senseMapInfo(at.translate(1, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[72];
+        _v_5_5 = Math.min(Math.min(Math.min(_v_5_5 - cost, _v_4_4), _v_4_5), _v_5_4) + cost;
+      }
+    }
+    if (!invalid[70]) {
+      var tile = rc.senseMapInfo(at.translate(1, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[70];
+        _v_5_3 = Math.min(Math.min(Math.min(_v_5_3 - cost, _v_4_3), _v_4_4), _v_5_4) + cost;
+      }
+    }
+    if (!invalid[40]) {
+      var tile = rc.senseMapInfo(at.translate(-2, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[40];
+        _v_2_6 = Math.min(Math.min(Math.min(_v_2_6 - cost, _v_2_5), _v_3_5), _v_3_6) + cost;
+      }
+    }
+    if (!invalid[36]) {
+      var tile = rc.senseMapInfo(at.translate(-2, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[36];
+        _v_2_2 = Math.min(Math.min(Math.min(_v_2_2 - cost, _v_2_3), _v_3_2), _v_3_3) + cost;
+      }
+    }
+    if (!invalid[37]) {
+      var tile = rc.senseMapInfo(at.translate(-2, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[37];
+        _v_2_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_2_3 - cost, _v_2_2), _v_2_4), _v_3_2), _v_3_3), _v_3_4) + cost;
+      }
+    }
+    if (!invalid[81]) {
+      var tile = rc.senseMapInfo(at.translate(2, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[81];
+        _v_6_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_6_3 - cost, _v_5_2), _v_5_3), _v_5_4), _v_6_2), _v_6_4) + cost;
+      }
+    }
+    if (!invalid[51]) {
+      var tile = rc.senseMapInfo(at.translate(-1, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[51];
+        _v_3_6 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_6 - cost, _v_2_5), _v_2_6), _v_3_5), _v_4_5), _v_4_6) + cost;
+      }
+    }
+    if (!invalid[47]) {
+      var tile = rc.senseMapInfo(at.translate(-1, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[47];
+        _v_3_2 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_2 - cost, _v_2_2), _v_2_3), _v_3_3), _v_4_2), _v_4_3) + cost;
+      }
+    }
+    if (!invalid[38]) {
+      var tile = rc.senseMapInfo(at.translate(-2, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[38];
+        _v_2_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_2_4 - cost, _v_2_3), _v_2_5), _v_3_3), _v_3_4), _v_3_5) + cost;
+      }
+    }
+    if (!invalid[82]) {
+      var tile = rc.senseMapInfo(at.translate(2, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[82];
+        _v_6_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_6_4 - cost, _v_5_3), _v_5_4), _v_5_5), _v_6_3), _v_6_5) + cost;
+      }
+    }
+    if (!invalid[62]) {
+      var tile = rc.senseMapInfo(at.translate(0, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[62];
+        _v_4_6 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_6 - cost, _v_3_5), _v_3_6), _v_4_5), _v_5_5), _v_5_6) + cost;
+      }
+    }
+    if (!invalid[58]) {
+      var tile = rc.senseMapInfo(at.translate(0, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[58];
+        _v_4_2 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_2 - cost, _v_3_2), _v_3_3), _v_4_3), _v_5_2), _v_5_3) + cost;
+      }
+    }
+    if (!invalid[39]) {
+      var tile = rc.senseMapInfo(at.translate(-2, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[39];
+        _v_2_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_2_5 - cost, _v_2_4), _v_2_6), _v_3_4), _v_3_5), _v_3_6) + cost;
+      }
+    }
+    if (!invalid[83]) {
+      var tile = rc.senseMapInfo(at.translate(2, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[83];
+        _v_6_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_6_5 - cost, _v_5_4), _v_5_5), _v_5_6), _v_6_4), _v_6_6) + cost;
+      }
+    }
+    if (!invalid[73]) {
+      var tile = rc.senseMapInfo(at.translate(1, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[73];
+        _v_5_6 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_6 - cost, _v_4_5), _v_4_6), _v_5_5), _v_6_5), _v_6_6) + cost;
+      }
+    }
+    if (!invalid[69]) {
+      var tile = rc.senseMapInfo(at.translate(1, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[69];
+        _v_5_2 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_2 - cost, _v_4_2), _v_4_3), _v_5_3), _v_6_2), _v_6_3) + cost;
+      }
+    }
+    if (!invalid[84]) {
+      var tile = rc.senseMapInfo(at.translate(2, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[84];
+        _v_6_6 = Math.min(Math.min(Math.min(_v_6_6 - cost, _v_5_5), _v_5_6), _v_6_5) + cost;
+      }
+    }
+    if (!invalid[80]) {
+      var tile = rc.senseMapInfo(at.translate(2, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[80];
+        _v_6_2 = Math.min(Math.min(Math.min(_v_6_2 - cost, _v_5_2), _v_5_3), _v_6_3) + cost;
+      }
+    }
+    if (!invalid[30]) {
+      var tile = rc.senseMapInfo(at.translate(-3, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_1_7 = Math.min(Math.min(Math.min(_v_1_7 - cost, _v_1_6), _v_2_6), _v_2_7) + cost;
+      }
+    }
+    if (!invalid[24]) {
+      var tile = rc.senseMapInfo(at.translate(-3, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_1_1 = Math.min(Math.min(Math.min(_v_1_1 - cost, _v_1_2), _v_2_1), _v_2_2) + cost;
+      }
+    }
+    if (!invalid[25]) {
+      var tile = rc.senseMapInfo(at.translate(-3, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_1_2 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_1_2 - cost, _v_1_1), _v_1_3), _v_2_1), _v_2_2), _v_2_3) + cost;
+      }
+    }
+    if (!invalid[91]) {
+      var tile = rc.senseMapInfo(at.translate(3, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_7_2 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_7_2 - cost, _v_6_1), _v_6_2), _v_6_3), _v_7_1), _v_7_3) + cost;
+      }
+    }
+    if (!invalid[41]) {
+      var tile = rc.senseMapInfo(at.translate(-2, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_2_7 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_2_7 - cost, _v_1_6), _v_1_7), _v_2_6), _v_3_6), _v_3_7) + cost;
+      }
+    }
+    if (!invalid[35]) {
+      var tile = rc.senseMapInfo(at.translate(-2, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_2_1 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_2_1 - cost, _v_1_1), _v_1_2), _v_2_2), _v_3_1), _v_3_2) + cost;
+      }
+    }
+    if (!invalid[26]) {
+      var tile = rc.senseMapInfo(at.translate(-3, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_1_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_1_3 - cost, _v_1_2), _v_1_4), _v_2_2), _v_2_3), _v_2_4) + cost;
+      }
+    }
+    if (!invalid[92]) {
+      var tile = rc.senseMapInfo(at.translate(3, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_7_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_7_3 - cost, _v_6_2), _v_6_3), _v_6_4), _v_7_2), _v_7_4) + cost;
+      }
+    }
+    if (!invalid[52]) {
+      var tile = rc.senseMapInfo(at.translate(-1, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_3_7 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_7 - cost, _v_2_6), _v_2_7), _v_3_6), _v_4_6), _v_4_7) + cost;
+      }
+    }
+    if (!invalid[46]) {
+      var tile = rc.senseMapInfo(at.translate(-1, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_3_1 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_1 - cost, _v_2_1), _v_2_2), _v_3_2), _v_4_1), _v_4_2) + cost;
+      }
+    }
+    if (!invalid[27]) {
+      var tile = rc.senseMapInfo(at.translate(-3, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[27];
+        _v_1_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_1_4 - cost, _v_1_3), _v_1_5), _v_2_3), _v_2_4), _v_2_5) + cost;
+      }
+    }
+    if (!invalid[93]) {
+      var tile = rc.senseMapInfo(at.translate(3, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[93];
+        _v_7_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_7_4 - cost, _v_6_3), _v_6_4), _v_6_5), _v_7_3), _v_7_5) + cost;
+      }
+    }
+    if (!invalid[63]) {
+      var tile = rc.senseMapInfo(at.translate(0, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[63];
+        _v_4_7 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_7 - cost, _v_3_6), _v_3_7), _v_4_6), _v_5_6), _v_5_7) + cost;
+      }
+    }
+    if (!invalid[57]) {
+      var tile = rc.senseMapInfo(at.translate(0, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; } + robotCosts[57];
+        _v_4_1 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_1 - cost, _v_3_1), _v_3_2), _v_4_2), _v_5_1), _v_5_2) + cost;
+      }
+    }
+    if (!invalid[28]) {
+      var tile = rc.senseMapInfo(at.translate(-3, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_1_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_1_5 - cost, _v_1_4), _v_1_6), _v_2_4), _v_2_5), _v_2_6) + cost;
+      }
+    }
+    if (!invalid[94]) {
+      var tile = rc.senseMapInfo(at.translate(3, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_7_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_7_5 - cost, _v_6_4), _v_6_5), _v_6_6), _v_7_4), _v_7_6) + cost;
+      }
+    }
+    if (!invalid[74]) {
+      var tile = rc.senseMapInfo(at.translate(1, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_5_7 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_7 - cost, _v_4_6), _v_4_7), _v_5_6), _v_6_6), _v_6_7) + cost;
+      }
+    }
+    if (!invalid[68]) {
+      var tile = rc.senseMapInfo(at.translate(1, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_5_1 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_1 - cost, _v_4_1), _v_4_2), _v_5_2), _v_6_1), _v_6_2) + cost;
+      }
+    }
+    if (!invalid[29]) {
+      var tile = rc.senseMapInfo(at.translate(-3, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_1_6 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_1_6 - cost, _v_1_5), _v_1_7), _v_2_5), _v_2_6), _v_2_7) + cost;
+      }
+    }
+    if (!invalid[95]) {
+      var tile = rc.senseMapInfo(at.translate(3, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_7_6 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_7_6 - cost, _v_6_5), _v_6_6), _v_6_7), _v_7_5), _v_7_7) + cost;
+      }
+    }
+    if (!invalid[85]) {
+      var tile = rc.senseMapInfo(at.translate(2, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_6_7 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_6_7 - cost, _v_5_6), _v_5_7), _v_6_6), _v_7_6), _v_7_7) + cost;
+      }
+    }
+    if (!invalid[79]) {
+      var tile = rc.senseMapInfo(at.translate(2, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_6_1 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_6_1 - cost, _v_5_1), _v_5_2), _v_6_2), _v_7_1), _v_7_2) + cost;
+      }
+    }
+    if (!invalid[96]) {
+      var tile = rc.senseMapInfo(at.translate(3, 3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_7_7 = Math.min(Math.min(Math.min(_v_7_7 - cost, _v_6_6), _v_6_7), _v_7_6) + cost;
+      }
+    }
+    if (!invalid[90]) {
+      var tile = rc.senseMapInfo(at.translate(3, -3));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_7_1 = Math.min(Math.min(Math.min(_v_7_1 - cost, _v_6_1), _v_6_2), _v_7_2) + cost;
+      }
+    }
+    if (!invalid[14]) {
+      var tile = rc.senseMapInfo(at.translate(-4, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_0_2 = Math.min(Math.min(Math.min(Math.min(_v_0_2 - cost, _v_0_3), _v_1_1), _v_1_2), _v_1_3) + cost;
+      }
+    }
+    if (!invalid[102]) {
+      var tile = rc.senseMapInfo(at.translate(4, -2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_8_2 = Math.min(Math.min(Math.min(Math.min(_v_8_2 - cost, _v_7_1), _v_7_2), _v_7_3), _v_8_3) + cost;
+      }
+    }
+    if (!invalid[42]) {
+      var tile = rc.senseMapInfo(at.translate(-2, 4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_2_8 = Math.min(Math.min(Math.min(Math.min(_v_2_8 - cost, _v_1_7), _v_2_7), _v_3_7), _v_3_8) + cost;
+      }
+    }
+    if (!invalid[34]) {
+      var tile = rc.senseMapInfo(at.translate(-2, -4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_2_0 = Math.min(Math.min(Math.min(Math.min(_v_2_0 - cost, _v_1_1), _v_2_1), _v_3_0), _v_3_1) + cost;
+      }
+    }
+    if (!invalid[15]) {
+      var tile = rc.senseMapInfo(at.translate(-4, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_0_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_0_3 - cost, _v_0_2), _v_0_4), _v_1_2), _v_1_3), _v_1_4) + cost;
+      }
+    }
+    if (!invalid[103]) {
+      var tile = rc.senseMapInfo(at.translate(4, -1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_8_3 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_8_3 - cost, _v_7_2), _v_7_3), _v_7_4), _v_8_2), _v_8_4) + cost;
+      }
+    }
+    if (!invalid[53]) {
+      var tile = rc.senseMapInfo(at.translate(-1, 4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_3_8 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_8 - cost, _v_2_7), _v_2_8), _v_3_7), _v_4_7), _v_4_8) + cost;
+      }
+    }
+    if (!invalid[45]) {
+      var tile = rc.senseMapInfo(at.translate(-1, -4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_3_0 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_3_0 - cost, _v_2_0), _v_2_1), _v_3_1), _v_4_0), _v_4_1) + cost;
+      }
+    }
+    if (!invalid[16]) {
+      var tile = rc.senseMapInfo(at.translate(-4, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_0_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_0_4 - cost, _v_0_3), _v_0_5), _v_1_3), _v_1_4), _v_1_5) + cost;
+      }
+    }
+    if (!invalid[104]) {
+      var tile = rc.senseMapInfo(at.translate(4, 0));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_8_4 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_8_4 - cost, _v_7_3), _v_7_4), _v_7_5), _v_8_3), _v_8_5) + cost;
+      }
+    }
+    if (!invalid[64]) {
+      var tile = rc.senseMapInfo(at.translate(0, 4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_4_8 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_8 - cost, _v_3_7), _v_3_8), _v_4_7), _v_5_7), _v_5_8) + cost;
+      }
+    }
+    if (!invalid[56]) {
+      var tile = rc.senseMapInfo(at.translate(0, -4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_4_0 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_4_0 - cost, _v_3_0), _v_3_1), _v_4_1), _v_5_0), _v_5_1) + cost;
+      }
+    }
+    if (!invalid[17]) {
+      var tile = rc.senseMapInfo(at.translate(-4, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_0_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_0_5 - cost, _v_0_4), _v_0_6), _v_1_4), _v_1_5), _v_1_6) + cost;
+      }
+    }
+    if (!invalid[105]) {
+      var tile = rc.senseMapInfo(at.translate(4, 1));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_8_5 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_8_5 - cost, _v_7_4), _v_7_5), _v_7_6), _v_8_4), _v_8_6) + cost;
+      }
+    }
+    if (!invalid[75]) {
+      var tile = rc.senseMapInfo(at.translate(1, 4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_5_8 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_8 - cost, _v_4_7), _v_4_8), _v_5_7), _v_6_7), _v_6_8) + cost;
+      }
+    }
+    if (!invalid[67]) {
+      var tile = rc.senseMapInfo(at.translate(1, -4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_5_0 = Math.min(Math.min(Math.min(Math.min(Math.min(_v_5_0 - cost, _v_4_0), _v_4_1), _v_5_1), _v_6_0), _v_6_1) + cost;
+      }
+    }
+    if (!invalid[18]) {
+      var tile = rc.senseMapInfo(at.translate(-4, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_0_6 = Math.min(Math.min(Math.min(Math.min(_v_0_6 - cost, _v_0_5), _v_1_5), _v_1_6), _v_1_7) + cost;
+      }
+    }
+    if (!invalid[106]) {
+      var tile = rc.senseMapInfo(at.translate(4, 2));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_8_6 = Math.min(Math.min(Math.min(Math.min(_v_8_6 - cost, _v_7_5), _v_7_6), _v_7_7), _v_8_5) + cost;
+      }
+    }
+    if (!invalid[86]) {
+      var tile = rc.senseMapInfo(at.translate(2, 4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_6_8 = Math.min(Math.min(Math.min(Math.min(_v_6_8 - cost, _v_5_7), _v_5_8), _v_6_7), _v_7_7) + cost;
+      }
     }
-    {
-      var loc = at.translate(-2, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[40]) << 3;
-        _v_2_6 = Math.min(_v_2_6, _v_2_5 + cost);
-        _v_2_6 = Math.min(_v_2_6, _v_3_5 + cost);
-        _v_2_6 = Math.min(_v_2_6, _v_3_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[36]) << 3;
-        _v_2_2 = Math.min(_v_2_2, _v_2_3 + cost);
-        _v_2_2 = Math.min(_v_2_2, _v_3_2 + cost);
-        _v_2_2 = Math.min(_v_2_2, _v_3_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[37]) << 3;
-        _v_2_3 = Math.min(_v_2_3, _v_2_2 + cost);
-        _v_2_3 = Math.min(_v_2_3, _v_2_4 + cost);
-        _v_2_3 = Math.min(_v_2_3, _v_3_2 + cost);
-        _v_2_3 = Math.min(_v_2_3, _v_3_3 + cost);
-        _v_2_3 = Math.min(_v_2_3, _v_3_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[81]) << 3;
-        _v_6_3 = Math.min(_v_6_3, _v_5_2 + cost);
-        _v_6_3 = Math.min(_v_6_3, _v_5_3 + cost);
-        _v_6_3 = Math.min(_v_6_3, _v_5_4 + cost);
-        _v_6_3 = Math.min(_v_6_3, _v_6_2 + cost);
-        _v_6_3 = Math.min(_v_6_3, _v_6_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[51]) << 3;
-        _v_3_6 = Math.min(_v_3_6, _v_2_5 + cost);
-        _v_3_6 = Math.min(_v_3_6, _v_2_6 + cost);
-        _v_3_6 = Math.min(_v_3_6, _v_3_5 + cost);
-        _v_3_6 = Math.min(_v_3_6, _v_4_5 + cost);
-        _v_3_6 = Math.min(_v_3_6, _v_4_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[47]) << 3;
-        _v_3_2 = Math.min(_v_3_2, _v_2_2 + cost);
-        _v_3_2 = Math.min(_v_3_2, _v_2_3 + cost);
-        _v_3_2 = Math.min(_v_3_2, _v_3_3 + cost);
-        _v_3_2 = Math.min(_v_3_2, _v_4_2 + cost);
-        _v_3_2 = Math.min(_v_3_2, _v_4_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[38]) << 3;
-        _v_2_4 = Math.min(_v_2_4, _v_2_3 + cost);
-        _v_2_4 = Math.min(_v_2_4, _v_2_5 + cost);
-        _v_2_4 = Math.min(_v_2_4, _v_3_3 + cost);
-        _v_2_4 = Math.min(_v_2_4, _v_3_4 + cost);
-        _v_2_4 = Math.min(_v_2_4, _v_3_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[82]) << 3;
-        _v_6_4 = Math.min(_v_6_4, _v_5_3 + cost);
-        _v_6_4 = Math.min(_v_6_4, _v_5_4 + cost);
-        _v_6_4 = Math.min(_v_6_4, _v_5_5 + cost);
-        _v_6_4 = Math.min(_v_6_4, _v_6_3 + cost);
-        _v_6_4 = Math.min(_v_6_4, _v_6_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[62]) << 3;
-        _v_4_6 = Math.min(_v_4_6, _v_3_5 + cost);
-        _v_4_6 = Math.min(_v_4_6, _v_3_6 + cost);
-        _v_4_6 = Math.min(_v_4_6, _v_4_5 + cost);
-        _v_4_6 = Math.min(_v_4_6, _v_5_5 + cost);
-        _v_4_6 = Math.min(_v_4_6, _v_5_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[58]) << 3;
-        _v_4_2 = Math.min(_v_4_2, _v_3_2 + cost);
-        _v_4_2 = Math.min(_v_4_2, _v_3_3 + cost);
-        _v_4_2 = Math.min(_v_4_2, _v_4_3 + cost);
-        _v_4_2 = Math.min(_v_4_2, _v_5_2 + cost);
-        _v_4_2 = Math.min(_v_4_2, _v_5_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[39]) << 3;
-        _v_2_5 = Math.min(_v_2_5, _v_2_4 + cost);
-        _v_2_5 = Math.min(_v_2_5, _v_2_6 + cost);
-        _v_2_5 = Math.min(_v_2_5, _v_3_4 + cost);
-        _v_2_5 = Math.min(_v_2_5, _v_3_5 + cost);
-        _v_2_5 = Math.min(_v_2_5, _v_3_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[83]) << 3;
-        _v_6_5 = Math.min(_v_6_5, _v_5_4 + cost);
-        _v_6_5 = Math.min(_v_6_5, _v_5_5 + cost);
-        _v_6_5 = Math.min(_v_6_5, _v_5_6 + cost);
-        _v_6_5 = Math.min(_v_6_5, _v_6_4 + cost);
-        _v_6_5 = Math.min(_v_6_5, _v_6_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[73]) << 3;
-        _v_5_6 = Math.min(_v_5_6, _v_4_5 + cost);
-        _v_5_6 = Math.min(_v_5_6, _v_4_6 + cost);
-        _v_5_6 = Math.min(_v_5_6, _v_5_5 + cost);
-        _v_5_6 = Math.min(_v_5_6, _v_6_5 + cost);
-        _v_5_6 = Math.min(_v_5_6, _v_6_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[69]) << 3;
-        _v_5_2 = Math.min(_v_5_2, _v_4_2 + cost);
-        _v_5_2 = Math.min(_v_5_2, _v_4_3 + cost);
-        _v_5_2 = Math.min(_v_5_2, _v_5_3 + cost);
-        _v_5_2 = Math.min(_v_5_2, _v_6_2 + cost);
-        _v_5_2 = Math.min(_v_5_2, _v_6_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[84]) << 3;
-        _v_6_6 = Math.min(_v_6_6, _v_5_5 + cost);
-        _v_6_6 = Math.min(_v_6_6, _v_5_6 + cost);
-        _v_6_6 = Math.min(_v_6_6, _v_6_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[80]) << 3;
-        _v_6_2 = Math.min(_v_6_2, _v_5_2 + cost);
-        _v_6_2 = Math.min(_v_6_2, _v_5_3 + cost);
-        _v_6_2 = Math.min(_v_6_2, _v_6_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_1_7 = Math.min(_v_1_7, _v_1_6 + cost);
-        _v_1_7 = Math.min(_v_1_7, _v_2_6 + cost);
-        _v_1_7 = Math.min(_v_1_7, _v_2_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_1_1 = Math.min(_v_1_1, _v_1_2 + cost);
-        _v_1_1 = Math.min(_v_1_1, _v_2_1 + cost);
-        _v_1_1 = Math.min(_v_1_1, _v_2_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_1_2 = Math.min(_v_1_2, _v_1_1 + cost);
-        _v_1_2 = Math.min(_v_1_2, _v_1_3 + cost);
-        _v_1_2 = Math.min(_v_1_2, _v_2_1 + cost);
-        _v_1_2 = Math.min(_v_1_2, _v_2_2 + cost);
-        _v_1_2 = Math.min(_v_1_2, _v_2_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_7_2 = Math.min(_v_7_2, _v_6_1 + cost);
-        _v_7_2 = Math.min(_v_7_2, _v_6_2 + cost);
-        _v_7_2 = Math.min(_v_7_2, _v_6_3 + cost);
-        _v_7_2 = Math.min(_v_7_2, _v_7_1 + cost);
-        _v_7_2 = Math.min(_v_7_2, _v_7_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_2_7 = Math.min(_v_2_7, _v_1_6 + cost);
-        _v_2_7 = Math.min(_v_2_7, _v_1_7 + cost);
-        _v_2_7 = Math.min(_v_2_7, _v_2_6 + cost);
-        _v_2_7 = Math.min(_v_2_7, _v_3_6 + cost);
-        _v_2_7 = Math.min(_v_2_7, _v_3_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_2_1 = Math.min(_v_2_1, _v_1_1 + cost);
-        _v_2_1 = Math.min(_v_2_1, _v_1_2 + cost);
-        _v_2_1 = Math.min(_v_2_1, _v_2_2 + cost);
-        _v_2_1 = Math.min(_v_2_1, _v_3_1 + cost);
-        _v_2_1 = Math.min(_v_2_1, _v_3_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_1_3 = Math.min(_v_1_3, _v_1_2 + cost);
-        _v_1_3 = Math.min(_v_1_3, _v_1_4 + cost);
-        _v_1_3 = Math.min(_v_1_3, _v_2_2 + cost);
-        _v_1_3 = Math.min(_v_1_3, _v_2_3 + cost);
-        _v_1_3 = Math.min(_v_1_3, _v_2_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_7_3 = Math.min(_v_7_3, _v_6_2 + cost);
-        _v_7_3 = Math.min(_v_7_3, _v_6_3 + cost);
-        _v_7_3 = Math.min(_v_7_3, _v_6_4 + cost);
-        _v_7_3 = Math.min(_v_7_3, _v_7_2 + cost);
-        _v_7_3 = Math.min(_v_7_3, _v_7_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_3_7 = Math.min(_v_3_7, _v_2_6 + cost);
-        _v_3_7 = Math.min(_v_3_7, _v_2_7 + cost);
-        _v_3_7 = Math.min(_v_3_7, _v_3_6 + cost);
-        _v_3_7 = Math.min(_v_3_7, _v_4_6 + cost);
-        _v_3_7 = Math.min(_v_3_7, _v_4_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_3_1 = Math.min(_v_3_1, _v_2_1 + cost);
-        _v_3_1 = Math.min(_v_3_1, _v_2_2 + cost);
-        _v_3_1 = Math.min(_v_3_1, _v_3_2 + cost);
-        _v_3_1 = Math.min(_v_3_1, _v_4_1 + cost);
-        _v_3_1 = Math.min(_v_3_1, _v_4_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[27]) << 3;
-        _v_1_4 = Math.min(_v_1_4, _v_1_3 + cost);
-        _v_1_4 = Math.min(_v_1_4, _v_1_5 + cost);
-        _v_1_4 = Math.min(_v_1_4, _v_2_3 + cost);
-        _v_1_4 = Math.min(_v_1_4, _v_2_4 + cost);
-        _v_1_4 = Math.min(_v_1_4, _v_2_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[93]) << 3;
-        _v_7_4 = Math.min(_v_7_4, _v_6_3 + cost);
-        _v_7_4 = Math.min(_v_7_4, _v_6_4 + cost);
-        _v_7_4 = Math.min(_v_7_4, _v_6_5 + cost);
-        _v_7_4 = Math.min(_v_7_4, _v_7_3 + cost);
-        _v_7_4 = Math.min(_v_7_4, _v_7_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[63]) << 3;
-        _v_4_7 = Math.min(_v_4_7, _v_3_6 + cost);
-        _v_4_7 = Math.min(_v_4_7, _v_3_7 + cost);
-        _v_4_7 = Math.min(_v_4_7, _v_4_6 + cost);
-        _v_4_7 = Math.min(_v_4_7, _v_5_6 + cost);
-        _v_4_7 = Math.min(_v_4_7, _v_5_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1 + robotCosts[57]) << 3;
-        _v_4_1 = Math.min(_v_4_1, _v_3_1 + cost);
-        _v_4_1 = Math.min(_v_4_1, _v_3_2 + cost);
-        _v_4_1 = Math.min(_v_4_1, _v_4_2 + cost);
-        _v_4_1 = Math.min(_v_4_1, _v_5_1 + cost);
-        _v_4_1 = Math.min(_v_4_1, _v_5_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_1_5 = Math.min(_v_1_5, _v_1_4 + cost);
-        _v_1_5 = Math.min(_v_1_5, _v_1_6 + cost);
-        _v_1_5 = Math.min(_v_1_5, _v_2_4 + cost);
-        _v_1_5 = Math.min(_v_1_5, _v_2_5 + cost);
-        _v_1_5 = Math.min(_v_1_5, _v_2_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_7_5 = Math.min(_v_7_5, _v_6_4 + cost);
-        _v_7_5 = Math.min(_v_7_5, _v_6_5 + cost);
-        _v_7_5 = Math.min(_v_7_5, _v_6_6 + cost);
-        _v_7_5 = Math.min(_v_7_5, _v_7_4 + cost);
-        _v_7_5 = Math.min(_v_7_5, _v_7_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_5_7 = Math.min(_v_5_7, _v_4_6 + cost);
-        _v_5_7 = Math.min(_v_5_7, _v_4_7 + cost);
-        _v_5_7 = Math.min(_v_5_7, _v_5_6 + cost);
-        _v_5_7 = Math.min(_v_5_7, _v_6_6 + cost);
-        _v_5_7 = Math.min(_v_5_7, _v_6_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_5_1 = Math.min(_v_5_1, _v_4_1 + cost);
-        _v_5_1 = Math.min(_v_5_1, _v_4_2 + cost);
-        _v_5_1 = Math.min(_v_5_1, _v_5_2 + cost);
-        _v_5_1 = Math.min(_v_5_1, _v_6_1 + cost);
-        _v_5_1 = Math.min(_v_5_1, _v_6_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-3, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_1_6 = Math.min(_v_1_6, _v_1_5 + cost);
-        _v_1_6 = Math.min(_v_1_6, _v_1_7 + cost);
-        _v_1_6 = Math.min(_v_1_6, _v_2_5 + cost);
-        _v_1_6 = Math.min(_v_1_6, _v_2_6 + cost);
-        _v_1_6 = Math.min(_v_1_6, _v_2_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_7_6 = Math.min(_v_7_6, _v_6_5 + cost);
-        _v_7_6 = Math.min(_v_7_6, _v_6_6 + cost);
-        _v_7_6 = Math.min(_v_7_6, _v_6_7 + cost);
-        _v_7_6 = Math.min(_v_7_6, _v_7_5 + cost);
-        _v_7_6 = Math.min(_v_7_6, _v_7_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_6_7 = Math.min(_v_6_7, _v_5_6 + cost);
-        _v_6_7 = Math.min(_v_6_7, _v_5_7 + cost);
-        _v_6_7 = Math.min(_v_6_7, _v_6_6 + cost);
-        _v_6_7 = Math.min(_v_6_7, _v_7_6 + cost);
-        _v_6_7 = Math.min(_v_6_7, _v_7_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_6_1 = Math.min(_v_6_1, _v_5_1 + cost);
-        _v_6_1 = Math.min(_v_6_1, _v_5_2 + cost);
-        _v_6_1 = Math.min(_v_6_1, _v_6_2 + cost);
-        _v_6_1 = Math.min(_v_6_1, _v_7_1 + cost);
-        _v_6_1 = Math.min(_v_6_1, _v_7_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, 3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_7_7 = Math.min(_v_7_7, _v_6_6 + cost);
-        _v_7_7 = Math.min(_v_7_7, _v_6_7 + cost);
-        _v_7_7 = Math.min(_v_7_7, _v_7_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(3, -3);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_7_1 = Math.min(_v_7_1, _v_6_1 + cost);
-        _v_7_1 = Math.min(_v_7_1, _v_6_2 + cost);
-        _v_7_1 = Math.min(_v_7_1, _v_7_2 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-4, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_0_2 = Math.min(_v_0_2, _v_0_3 + cost);
-        _v_0_2 = Math.min(_v_0_2, _v_1_1 + cost);
-        _v_0_2 = Math.min(_v_0_2, _v_1_2 + cost);
-        _v_0_2 = Math.min(_v_0_2, _v_1_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(4, -2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_8_2 = Math.min(_v_8_2, _v_7_1 + cost);
-        _v_8_2 = Math.min(_v_8_2, _v_7_2 + cost);
-        _v_8_2 = Math.min(_v_8_2, _v_7_3 + cost);
-        _v_8_2 = Math.min(_v_8_2, _v_8_3 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, 4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_2_8 = Math.min(_v_2_8, _v_1_7 + cost);
-        _v_2_8 = Math.min(_v_2_8, _v_2_7 + cost);
-        _v_2_8 = Math.min(_v_2_8, _v_3_7 + cost);
-        _v_2_8 = Math.min(_v_2_8, _v_3_8 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-2, -4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_2_0 = Math.min(_v_2_0, _v_1_1 + cost);
-        _v_2_0 = Math.min(_v_2_0, _v_2_1 + cost);
-        _v_2_0 = Math.min(_v_2_0, _v_3_0 + cost);
-        _v_2_0 = Math.min(_v_2_0, _v_3_1 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-4, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_0_3 = Math.min(_v_0_3, _v_0_2 + cost);
-        _v_0_3 = Math.min(_v_0_3, _v_0_4 + cost);
-        _v_0_3 = Math.min(_v_0_3, _v_1_2 + cost);
-        _v_0_3 = Math.min(_v_0_3, _v_1_3 + cost);
-        _v_0_3 = Math.min(_v_0_3, _v_1_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(4, -1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_8_3 = Math.min(_v_8_3, _v_7_2 + cost);
-        _v_8_3 = Math.min(_v_8_3, _v_7_3 + cost);
-        _v_8_3 = Math.min(_v_8_3, _v_7_4 + cost);
-        _v_8_3 = Math.min(_v_8_3, _v_8_2 + cost);
-        _v_8_3 = Math.min(_v_8_3, _v_8_4 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, 4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_3_8 = Math.min(_v_3_8, _v_2_7 + cost);
-        _v_3_8 = Math.min(_v_3_8, _v_2_8 + cost);
-        _v_3_8 = Math.min(_v_3_8, _v_3_7 + cost);
-        _v_3_8 = Math.min(_v_3_8, _v_4_7 + cost);
-        _v_3_8 = Math.min(_v_3_8, _v_4_8 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-1, -4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_3_0 = Math.min(_v_3_0, _v_2_0 + cost);
-        _v_3_0 = Math.min(_v_3_0, _v_2_1 + cost);
-        _v_3_0 = Math.min(_v_3_0, _v_3_1 + cost);
-        _v_3_0 = Math.min(_v_3_0, _v_4_0 + cost);
-        _v_3_0 = Math.min(_v_3_0, _v_4_1 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-4, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_0_4 = Math.min(_v_0_4, _v_0_3 + cost);
-        _v_0_4 = Math.min(_v_0_4, _v_0_5 + cost);
-        _v_0_4 = Math.min(_v_0_4, _v_1_3 + cost);
-        _v_0_4 = Math.min(_v_0_4, _v_1_4 + cost);
-        _v_0_4 = Math.min(_v_0_4, _v_1_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(4, 0);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_8_4 = Math.min(_v_8_4, _v_7_3 + cost);
-        _v_8_4 = Math.min(_v_8_4, _v_7_4 + cost);
-        _v_8_4 = Math.min(_v_8_4, _v_7_5 + cost);
-        _v_8_4 = Math.min(_v_8_4, _v_8_3 + cost);
-        _v_8_4 = Math.min(_v_8_4, _v_8_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, 4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_4_8 = Math.min(_v_4_8, _v_3_7 + cost);
-        _v_4_8 = Math.min(_v_4_8, _v_3_8 + cost);
-        _v_4_8 = Math.min(_v_4_8, _v_4_7 + cost);
-        _v_4_8 = Math.min(_v_4_8, _v_5_7 + cost);
-        _v_4_8 = Math.min(_v_4_8, _v_5_8 + cost);
-      }
-    }
-    {
-      var loc = at.translate(0, -4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_4_0 = Math.min(_v_4_0, _v_3_0 + cost);
-        _v_4_0 = Math.min(_v_4_0, _v_3_1 + cost);
-        _v_4_0 = Math.min(_v_4_0, _v_4_1 + cost);
-        _v_4_0 = Math.min(_v_4_0, _v_5_0 + cost);
-        _v_4_0 = Math.min(_v_4_0, _v_5_1 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-4, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_0_5 = Math.min(_v_0_5, _v_0_4 + cost);
-        _v_0_5 = Math.min(_v_0_5, _v_0_6 + cost);
-        _v_0_5 = Math.min(_v_0_5, _v_1_4 + cost);
-        _v_0_5 = Math.min(_v_0_5, _v_1_5 + cost);
-        _v_0_5 = Math.min(_v_0_5, _v_1_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(4, 1);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_8_5 = Math.min(_v_8_5, _v_7_4 + cost);
-        _v_8_5 = Math.min(_v_8_5, _v_7_5 + cost);
-        _v_8_5 = Math.min(_v_8_5, _v_7_6 + cost);
-        _v_8_5 = Math.min(_v_8_5, _v_8_4 + cost);
-        _v_8_5 = Math.min(_v_8_5, _v_8_6 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, 4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_5_8 = Math.min(_v_5_8, _v_4_7 + cost);
-        _v_5_8 = Math.min(_v_5_8, _v_4_8 + cost);
-        _v_5_8 = Math.min(_v_5_8, _v_5_7 + cost);
-        _v_5_8 = Math.min(_v_5_8, _v_6_7 + cost);
-        _v_5_8 = Math.min(_v_5_8, _v_6_8 + cost);
-      }
-    }
-    {
-      var loc = at.translate(1, -4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_5_0 = Math.min(_v_5_0, _v_4_0 + cost);
-        _v_5_0 = Math.min(_v_5_0, _v_4_1 + cost);
-        _v_5_0 = Math.min(_v_5_0, _v_5_1 + cost);
-        _v_5_0 = Math.min(_v_5_0, _v_6_0 + cost);
-        _v_5_0 = Math.min(_v_5_0, _v_6_1 + cost);
-      }
-    }
-    {
-      var loc = at.translate(-4, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_0_6 = Math.min(_v_0_6, _v_0_5 + cost);
-        _v_0_6 = Math.min(_v_0_6, _v_1_5 + cost);
-        _v_0_6 = Math.min(_v_0_6, _v_1_6 + cost);
-        _v_0_6 = Math.min(_v_0_6, _v_1_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(4, 2);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_8_6 = Math.min(_v_8_6, _v_7_5 + cost);
-        _v_8_6 = Math.min(_v_8_6, _v_7_6 + cost);
-        _v_8_6 = Math.min(_v_8_6, _v_7_7 + cost);
-        _v_8_6 = Math.min(_v_8_6, _v_8_5 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, 4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_6_8 = Math.min(_v_6_8, _v_5_7 + cost);
-        _v_6_8 = Math.min(_v_6_8, _v_5_8 + cost);
-        _v_6_8 = Math.min(_v_6_8, _v_6_7 + cost);
-        _v_6_8 = Math.min(_v_6_8, _v_7_7 + cost);
-      }
-    }
-    {
-      var loc = at.translate(2, -4);
-      var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;
-      if (tile != null && tile.isPassable()) {
-        var cost = (switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 2; case EMPTY -> 1; case ALLY_PRIMARY, ALLY_SECONDARY -> 0; } + 1) << 3;
-        _v_6_0 = Math.min(_v_6_0, _v_5_0 + cost);
-        _v_6_0 = Math.min(_v_6_0, _v_5_1 + cost);
-        _v_6_0 = Math.min(_v_6_0, _v_6_1 + cost);
-        _v_6_0 = Math.min(_v_6_0, _v_7_1 + cost);
+    if (!invalid[78]) {
+      var tile = rc.senseMapInfo(at.translate(2, -4));
+      if (tile.isPassable()) {
+        var cost = switch (tile.getPaint()) { case ENEMY_PRIMARY, ENEMY_SECONDARY -> 24; case EMPTY -> 16; case ALLY_PRIMARY, ALLY_SECONDARY -> 8; };
+        _v_6_0 = Math.min(Math.min(Math.min(Math.min(_v_6_0 - cost, _v_5_0), _v_5_1), _v_6_1), _v_7_1) + cost;
       }
     }
   }
@@ -1303,53 +1160,59 @@ public class PathHelper {
     //if (target.isWithinDistanceSquared(loc, 8) && rc.canMove(loc.directionTo(target))) {
       //    rc.move(pathfindGreedy();
       //    return true;
-      //}
+    //}
+    
+    Direction dir = null;
+    if (greedyTurns <= 0 && Clock.getBytecodesLeft() >= 3000 && !(target.isWithinDistanceSquared(loc, 8) && rc.canMove(loc.directionTo(target)))) {
+      var btc = Clock.getBytecodeNum();
+      var tStart = rc.getRoundNum();
+      pathStart();
+      var startBtc = Clock.getBytecodeNum();
+      if (rc.getRoundNum() != tStart) { startBtc += GameConstants.ROBOT_BYTECODE_LIMIT; }
+      pathIter();
+      var iterBtc = Clock.getBytecodeNum();
+      if (rc.getRoundNum() != tStart) { iterBtc += GameConstants.ROBOT_BYTECODE_LIMIT; }
+      dir = pathFinish(loc, target);
+      var finishBtc = Clock.getBytecodeNum();
+      if (rc.getRoundNum() != tStart) { finishBtc += GameConstants.ROBOT_BYTECODE_LIMIT; }
       
-      Direction dir = null;
-      if (greedyTurns <= 0 && Clock.getBytecodesLeft() >= 3000 && !(target.isWithinDistanceSquared(loc, 8) && rc.canMove(loc.directionTo(target)))) {
-        var btc = Clock.getBytecodeNum();
-        var tStart = rc.getRoundNum();
-        pathStart();
-        var startBtc = Clock.getBytecodeNum();
-        if (rc.getRoundNum() != tStart) { startBtc += GameConstants.ROBOT_BYTECODE_LIMIT; }
-        pathIter();
-        var iterBtc = Clock.getBytecodeNum();
-        if (rc.getRoundNum() != tStart) { iterBtc += GameConstants.ROBOT_BYTECODE_LIMIT; }
-        dir = pathFinish(loc, target);
-        var finishBtc = Clock.getBytecodeNum();
-        if (rc.getRoundNum() != tStart) { finishBtc += GameConstants.ROBOT_BYTECODE_LIMIT; }
-        
-        var greedy = false;
-        var oldDir = dir;
-        if (dir != null && hasLoc(loc.add(dir))) {
-          greedyTurns = 5;
-          dir = pathfindGreedy(target);
-          greedy = true;
-        }
-        
-        rc.setIndicatorString("BFS BTC: " + (finishBtc - btc)
-        + ", start: " + (startBtc - btc)
-        + ", iter: " + (iterBtc - startBtc)
-        + ", end: " + (finishBtc - iterBtc)
-        + ". g? " + greedy);
-      } else {
-        rc.setIndicatorString("GREEDY PATHFINDING ENABLED");
-        greedyTurns -= 1;
+      var greedy = false;
+      var oldDir = dir;
+      if (dir != null && hasLoc(loc.add(dir))) {
+        greedyTurns = 5;
         dir = pathfindGreedy(target);
+        greedy = true;
       }
       
-      if (dir != null) {
-        if (rc.canMove(dir)) {
-          if (!target.isWithinDistanceSquared(loc, 2)) {
-            addLoc(loc);
-          }
-          rc.move(dir);
-          return true;
-        } else {
-          System.out.println("Went over and moved illegally; would throw exception! Dir = " + dir);
-        }
+      rc.setIndicatorString("BFS BTC: " + (finishBtc - btc)
+      + ", start: " + (startBtc - btc)
+      + ", iter: " + (iterBtc - startBtc)
+      + ", end: " + (finishBtc - iterBtc)
+      + ". g? " + greedy);
+    } else {
+      rc.setIndicatorString("GREEDY PATHFINDING ENABLED");
+      greedyTurns -= 1;
+      dir = pathfindGreedy(target);
+      if (greedyTurns == 0) {
+        // Reset lastLocs when switching out of greedy mode
+        java.util.Arrays.fill(lastLocs, null);
       }
-      return false;
     }
     
+    if (dir != null) {
+      if (rc.canMove(dir)) {
+        if (!target.isWithinDistanceSquared(loc, 2)) {
+          addLoc(loc);
+        }
+        rc.move(dir);
+        return true;
+      } else {
+        System.out.println("Went over and moved illegally; would throw exception! Dir = " + dir);
+      }
+    } else if (rc.isMovementReady()) {
+      exploreTarget = null;
+    }
+    return false;
+  }
+  
 }

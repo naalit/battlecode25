@@ -54,7 +54,10 @@ public class RobotPlayer {
     return Math.abs(rng_acc);
   }
 
-  static final int TOWER_KEEP_PAINT = 100;
+  static int towerKeepPaint() {
+    return rc.getNumberTowers() > 3 ? 0 : 100;
+  }
+
   static final int MIN_TRANSFER_TOWER = 50;
   static final int MIN_TRANSFER_MOPPER = 10;
 
@@ -63,12 +66,12 @@ public class RobotPlayer {
       if (rc.isActionReady()) {
         Arrays.stream(rc.senseNearbyRobots(2, rc.getTeam()))
             // TODO constant for this
-            .filter(x -> x.getType().isTowerType() && x.paintAmount >= TOWER_KEEP_PAINT + MIN_TRANSFER_TOWER)
+            .filter(x -> x.getType().isTowerType() && x.paintAmount >= towerKeepPaint() + MIN_TRANSFER_TOWER)
             .findFirst()
             .ifPresent(x -> {
               // really annoying that we have to do this (since λ doesn't support throws)
               try {
-                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - TOWER_KEEP_PAINT));
+                rc.transferPaint(x.location, -Math.min(rc.getType().paintCapacity - rc.getPaint(), x.paintAmount - towerKeepPaint()));
               } catch (GameActionException e) {
                 throw new RuntimeException(e);
               }
@@ -136,7 +139,8 @@ public class RobotPlayer {
           for (var i : nearbyAllies) {
             if (i.type == UnitType.SOLDIER) {
               nearbyFriendlySoldiers += 1;
-            } if (i.type == UnitType.MOPPER) {
+            }
+            if (i.type == UnitType.MOPPER) {
               mopCount += 1;
             }
           }
@@ -261,7 +265,7 @@ public class RobotPlayer {
                     : UnitType.SOLDIER;
                 rc.setIndicatorString("chance: " + splasherChance + " / " + mopperChance + " --> " + toSpawn + " (sample " + (rng() % 100) + ")");
               }
-              if (toSpawn != null && rc.getPaint() >= toSpawn.paintCost + (panicMode ? 0 : TOWER_KEEP_PAINT)) {
+              if (toSpawn != null && rc.getPaint() >= toSpawn.paintCost + (panicMode ? 0 : towerKeepPaint())) {
                 Direction bdir = null;
                 var selfPaint = false;
                 var panicDist = 100000;
@@ -283,7 +287,7 @@ public class RobotPlayer {
                   toSpawn = null;
                 }
               }
-              if (toSpawn != null && rc.getType().paintPerTurn == 0 && rc.getPaint() < toSpawn.paintCost + (panicMode ? 0 : TOWER_KEEP_PAINT)) {
+              if (toSpawn != null && rc.getType().paintPerTurn == 0 && rc.getPaint() < toSpawn.paintCost + (panicMode ? 0 : towerKeepPaint())) {
                 toSpawn = null;
               }
             }

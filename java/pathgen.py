@@ -2,7 +2,7 @@ indent = 1
 def emit(s, skip_n=False):
     global indent
     for line in s.split('\n'):
-        if not skip_n and line.strip().startswith('}'):
+        if not skip_n and (line.strip().startswith('}') or line.strip().startswith('//}')):
             indent -= 1
         print(" " * (indent * 2) + line.strip())
         if not skip_n and line.strip().endswith('{'):
@@ -47,7 +47,7 @@ for x in range(-4, 5):
     for y in range(-4, 5):
         if x*x + y*y <= 20:
             print(f"  static int {g(x, y)};")
-emit("static boolean[] occupied;")
+emit("static boolean[] invalid;")
 emit("static int[] robotCosts;")
 emit("""
   static final Direction[] ORDERED_DIRECTIONS = {
@@ -81,34 +81,40 @@ with block("static void pathStart() throws GameActionException"):
     emit("var at = rc.getLocation();")
 
     # Store the positions of nearby robots in a lookup table so we can avoid them
-#     emit("occupied = new boolean[121];")
-#     emit("""
-#         for (var r : rc.senseNearbyRobots()) {
-#           var x = r.location.x - at.x;
-#           var y = r.location.y - at.y;
-#           if (x*x + y*y <= 20) {
-#             var i = (5 + x) * 11 + 5 + y;
-#             occupied[i] = true;
-#           }
-#         }
-#     """)
+    emit("invalid = new boolean[121];")
     emit("robotCosts = new int[121];")
     emit("""
         for (var r : rc.senseNearbyRobots(9)) {
           var x = r.location.x - at.x;
           var y = r.location.y - at.y;
-          robotCosts[(5 + x) * 11 + 5 + y] = 100000;
+          invalid[(5 + x) * 11 + 5 + y] = true;
           if (r.getTeam() == rc.getTeam()) {
             for (int dx = -1; dx <= 1; dx++) {
               for (int dy = -1; dy <= 1; dy++) {
                 if ((dx != 0 || dy != 0) && (x+dx)*(x+dx) + (y+dy)*(y+dy) <= 9) {
-                  robotCosts[(5 + x + dx) * 11 + 5 + y + dy] += 1;
+                  robotCosts[(5 + x + dx) * 11 + 5 + y + dy] += 1 << 3;
                 }
               }
             }
           }
         }
     """)
+
+    emit("var height = rc.getMapHeight();")
+    emit("var width = rc.getMapWidth();")
+    for x in range(-4, 0):
+        with block(f"if (at.x - {-x} < 0)"):
+            for y in range(-4, 5):
+                emit(f"invalid[{(5 + x) * 11 + 5 + y}] = true;")
+        with block(f"if (at.x + {-x} >= width)"):
+            for y in range(-4, 5):
+                emit(f"invalid[{(5 - x) * 11 + 5 + y}] = true;")
+        with block(f"if (at.y - {-x} < 0)"):
+            for y in range(-4, 5):
+                emit(f"invalid[{(5 + y) * 11 + 5 + x}] = true;")
+        with block(f"if (at.y + {-x} >= height)"):
+            for y in range(-4, 5):
+                emit(f"invalid[{(5 + y) * 11 + 5 - x}] = true;")
 
     # Initialize locations adjacent to the starting point
     q = [0, 1, 2, 3, 0, 4, 5, 6, 7]
@@ -121,22 +127,25 @@ with block("static void pathStart() throws GameActionException"):
                 baseIdx = (5 + x) * 11 + 5 + y
                 with block(f"if (rc.canMove({dir}))"):
                     emit(f"var loc = at.translate({x}, {y});")
-                    cost = f'{paintCost("loc")} + {TURN_VALUE} + robotCosts[{baseIdx}]'
-                    emit(f"{g(x, y)} = (({cost}) << 3) | {didx};")
+                    cost = f'({paintCost("loc")} + {TURN_VALUE}) << 3 + robotCosts[{baseIdx}]'
+                    emit(f"{g(x, y)} = ({cost}) | {didx};")
 
 def doLoc(x, y, r2):
-    with block(""):
-        emit(f"var loc = at.translate({x}, {y});")
-        emit(f"var tile = rc.onTheMap(loc) ? rc.senseMapInfo(loc) : null;")
-        baseIdx = (5 + x) * 11 + 5 + y
-        #with block(f"if (tile != null && tile.isPassable() && !occupied[{baseIdx}])"):
-        with block(f"if (tile != null && tile.isPassable())"):
+    if x == 0 and y == 0:
+        return
+    baseIdx = (5 + x) * 11 + 5 + y
+    with block(f"if (!invalid[{baseIdx}])"):
+        emit(f"var tile = rc.senseMapInfo(at.translate({x}, {y}));")
+        with block(f"if (tile.isPassable())"):
+            cost = f"switch (tile.getPaint()) {{ case ENEMY_PRIMARY, ENEMY_SECONDARY -> {(2 * PAINT_VALUE + TURN_VALUE) << 3}; case EMPTY -> {(PAINT_VALUE + TURN_VALUE) << 3}; case ALLY_PRIMARY, ALLY_SECONDARY -> {TURN_VALUE << 3}; }}"
+
             if x*x+y*y <= 9:
-                emit(f"var cost = ({paintCostTile("tile")} + {TURN_VALUE} + robotCosts[{baseIdx}]) << 3;")
+                emit(f"var cost = {cost} + robotCosts[{baseIdx}];")
             else:
-                emit(f"var cost = ({paintCostTile("tile")} + {TURN_VALUE}) << 3;")
+                emit(f"var cost = {cost};")
             maxD = max(x*x, y*y)
 
+            c = f"{g(x, y)} - cost"
             for dx in range(-1, 2):
                 for dy in range(-1, 2):
                     x2 = x + dx
@@ -144,7 +153,8 @@ def doLoc(x, y, r2):
                     # Only consider locations that are in previous layers (their max coordinate is less than this one)
                     if x2*x2+y2*y2 <= r2 and (dx != 0 or dy != 0) and (x2*x2 <= maxD and y2*y2 <= maxD):
                         #i = (5 + x2) * 11 + 5 + y2
-                        emit(f"{g(x, y)} = Math.min({g(x, y)}, {g(x2, y2)} + cost);")
+                        c = f"Math.min({c}, {g(x2, y2)})"
+            emit(f"{g(x, y)} = {c} + cost;")
 
 # Propagate scores and directions outward
 # This could be run multiple times to be more accurate
@@ -326,6 +336,10 @@ static boolean targetMove(MapLocation target) throws GameActionException {
         rc.setIndicatorString("GREEDY PATHFINDING ENABLED");
         greedyTurns -= 1;
         dir = pathfindGreedy(target);
+        if (greedyTurns == 0) {
+            // Reset lastLocs when switching out of greedy mode
+            java.util.Arrays.fill(lastLocs, null);
+        }
     }
 
     if (dir != null) {
@@ -338,6 +352,8 @@ static boolean targetMove(MapLocation target) throws GameActionException {
         } else {
             System.out.println("Went over and moved illegally; would throw exception! Dir = " + dir);
         }
+    } else if (rc.isMovementReady()) {
+        exploreTarget = null;
     }
     return false;
 }

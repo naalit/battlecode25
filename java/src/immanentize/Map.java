@@ -340,7 +340,7 @@ public class Map {
     isPaintTower = false;
     for (var tower : towers) {
       rc.setIndicatorDot(tower.loc, 255, 0, 0);
-      if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= TOWER_KEEP_PAINT + MIN_TRANSFER_TOWER))) {
+      if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= towerKeepPaint() + MIN_TRANSFER_TOWER))) {
         if (!isPaintTower && tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) isPaintTower = true;
         if (closestPaintTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestPaintTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestPaintTower = tower;

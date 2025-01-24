@@ -333,11 +333,11 @@ public class Micro {
           if (mopReady && unit.type.isRobotType() && (unit.getType() != UnitType.MOPPER || unit.paintAmount < 40) && unit.paintAmount <= unit.type.paintCapacity - MIN_TRANSFER_MOPPER) {
             //loc.transferScore = (bot.paint - 50) * (1 - (double) unit.paintAmount / unit.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
             mopReady = false;
-          } else if (unit.type.isRobotType() || bot.paint >= minPaint() + MIN_TRANSFER_TOWER || unit.paintAmount < TOWER_KEEP_PAINT + MIN_TRANSFER_TOWER) {
+          } else if (unit.type.isRobotType() || bot.paint >= minPaint() + MIN_TRANSFER_TOWER || unit.paintAmount < towerKeepPaint() + MIN_TRANSFER_TOWER) {
             loc.adjacentAllies += 1;
           } else {
             // transfer target
-            loc.transferScore = (unit.paintAmount - TOWER_KEEP_PAINT) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
+            loc.transferScore = (unit.paintAmount - towerKeepPaint()) * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
           }
         }
       }
@@ -363,6 +363,7 @@ public class Micro {
   static int bfTarget;
   static int bfScore;
   static MapLocation lastTarget;
+  static Target microTarget;
   static int rlCounter;
 
   static Attack stayAttack;
@@ -392,17 +393,10 @@ public class Micro {
       }
     }
     bfAttack = Clock.getBytecodeNum();
-    Target target;
-    if (exploreTurns > 0) {
-      target = pickExploreTarget(bot);
-      exploreTurns -= 1;
-    } else {
-      target = pickTarget(bot);
-    }
-    if (target.loc != null) {
-      rc.setIndicatorLine(bot.startPos, target.loc, 0, 0, 255);
-      if (!target.loc.equals(lastTarget)) {
-        lastTarget = target.loc;
+    if (microTarget.loc != null) {
+      rc.setIndicatorLine(bot.startPos, microTarget.loc, 0, 0, 255);
+      if (!microTarget.loc.equals(lastTarget)) {
+        lastTarget = microTarget.loc;
         recentLocs.clear();
       }
     }
@@ -411,7 +405,7 @@ public class Micro {
     bfScore = Clock.getBytecodeNum();
     var pmul = bot.type == UnitType.MOPPER ? 2 : 1;
     MicroLoc best = null;
-    var pTargetDist = target.loc != null ? bot.startPos.distanceSquaredTo(target.loc) : 0;
+    var pTargetDist = microTarget.loc != null ? bot.startPos.distanceSquaredTo(microTarget.loc) : 0;
     var totalNearby = nearbyAllies.length + nearbyEnemies.length + 2;
     // 0.9-1.1? we can adjust numbers. they start out at 0-1 so
     var attackMult = ((double) nearbyAllies.length + 1) / totalNearby * 0.4 + 0.8;
@@ -428,8 +422,8 @@ public class Micro {
     var tmult = 0.1;//rc.getRoundNum() > 400 ? 0.01 : 0.1;
     for (var loc : locs) {
       var score = Math.max(loc.attack.score, stayAttack.score) * attackMult - loc.incomingDamage * defenseMult;
-      if (target.loc != null) {
-        score -= (target.loc.distanceSquaredTo(loc.loc) - pTargetDist) * tmult * target.score;// * (double) (rtargets.length - i) / rtargets.length;
+      if (microTarget.loc != null) {
+        score -= (microTarget.loc.distanceSquaredTo(loc.loc) - pTargetDist) * tmult * microTarget.score;// * (double) (rtargets.length - i) / rtargets.length;
         //score -= Math.sqrt(target.distanceSquaredTo(loc.loc)) * tmult;
       }
       if (loc.attack.score == 0.0 && stayAttack.score == 0.0 && recentLocs.contains(loc.loc)) {
@@ -473,12 +467,27 @@ public class Micro {
   }
 
   static void doMicro() throws GameActionException {
-    var doPathfind = nearbyEnemies.length == 0 && rc.isMovementReady() && !rc.getType().isTowerType() && (map.ruinTarget == null || !map.ruinTarget.center.isWithinDistanceSquared(rc.getLocation(), 8));
+    var bot = new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() > 0 && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady() && !rc.getType().isTowerType(), rc.getPaint(), rc.getHealth());
+    var doPathfind = nearbyEnemies.length == 0 && bot.canMove &&
+        (map.ruinTarget == null || !map.ruinTarget.center.isWithinDistanceSquared(rc.getLocation(), 8)
+            || (map.ruinTarget.allyTiles < 24 && rc.getPaint() < minPaint() + rc.getType().attackCost));
+    if (exploreTurns > 0) {
+      microTarget = pickExploreTarget(bot);
+      exploreTurns -= 1;
+    } else {
+      microTarget = pickTarget(bot);
+    }
+
+    if (doPathfind) {
+      rlCounter = 0;
+      PathHelper.targetMove(microTarget.loc);
+      bot = new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() > 0 && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), false, rc.getPaint(), rc.getHealth());
+    }
+
     var start = Clock.getBytecodeNum();
     if (rc.getType().isTowerType()) {
       rc.attack(null);
     }
-    var bot = new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() > 0 && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady() && !doPathfind && !rc.getType().isTowerType(), rc.getPaint(), rc.getHealth());
     var loc = findBestLoc(bot, true);
     if (!loc.loc.equals(rc.getLocation())) {
       if (recentLocs.contains(loc.loc)) rlCounter += 1;
@@ -510,11 +519,8 @@ public class Micro {
       doAttack(loc.attack);
     }
     var end = Clock.getBytecodeNum();
-    rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
-
-    if (doPathfind) {
-      rlCounter = 0;
-      PathHelper.targetMove(lastTarget);
+    if (!doPathfind) {
+      rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
     }
     //rc.setIndicatorString("rlcounter: " + rlCounter + " / " + exploreTurns);
   }
