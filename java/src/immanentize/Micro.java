@@ -32,7 +32,8 @@ public class Micro {
   }
 
   static boolean doTowers() {
-    return rc.getChips() >= UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.7 || nearbyAllies.length == 0;
+    return rc.getChips() >= UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.7 || nearbyAllies.length == 0
+        || !map.isPaintTower;
   }
 
   static MapLocation exploreTarget = null;
@@ -421,6 +422,9 @@ public class Micro {
         stayAttack = loc.attack;
       }
     }
+
+    if (locs.length == 1) return locs[0];
+
     var tmult = 0.1;//rc.getRoundNum() > 400 ? 0.01 : 0.1;
     for (var loc : locs) {
       var score = Math.max(loc.attack.score, stayAttack.score) * attackMult - loc.incomingDamage * defenseMult;
@@ -445,6 +449,7 @@ public class Micro {
       loc.score = score;
       if (best == null || loc.score > best.score) best = loc;
     }
+
     return best;
   }
 
@@ -468,11 +473,12 @@ public class Micro {
   }
 
   static void doMicro() throws GameActionException {
+    var doPathfind = nearbyEnemies.length == 0 && rc.isMovementReady() && !rc.getType().isTowerType() && (map.ruinTarget == null || !map.ruinTarget.center.isWithinDistanceSquared(rc.getLocation(), 8));
     var start = Clock.getBytecodeNum();
     if (rc.getType().isTowerType()) {
       rc.attack(null);
     }
-    var bot = new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() > 0 && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady(), rc.getPaint(), rc.getHealth());
+    var bot = new MicroBot(rc.getType(), rc.getLocation(), rc.isActionReady() && rc.getPaint() > 0 && (rc.getPaint() >= minPaint() + rc.getType().attackCost || rc.getType() == UnitType.MOPPER), rc.isMovementReady() && !doPathfind && !rc.getType().isTowerType(), rc.getPaint(), rc.getHealth());
     var loc = findBestLoc(bot, true);
     if (!loc.loc.equals(rc.getLocation())) {
       if (recentLocs.contains(loc.loc)) rlCounter += 1;
@@ -481,7 +487,7 @@ public class Micro {
           recentLocs.removeFirst();
         }
         recentLocs.addLast(loc.loc);
-        rlCounter = 0;
+        rlCounter = Math.max(0, rlCounter - 5);
       }
 
       // Attack before moving if advantageous
@@ -492,7 +498,7 @@ public class Micro {
       if (rc.canMove(rc.getLocation().directionTo(loc.loc))) {
         rc.move(rc.getLocation().directionTo(loc.loc));
       }
-    } else if (rc.isMovementReady()) {
+    } else if (rc.isMovementReady() && !doPathfind) {
       rlCounter += 1;
       exploreTarget = null;
       if (rlCounter > 20) {
@@ -504,8 +510,13 @@ public class Micro {
       doAttack(loc.attack);
     }
     var end = Clock.getBytecodeNum();
-    //rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
-    rc.setIndicatorString("rlcounter: " + rlCounter + " / " + exploreTurns);
+    rc.setIndicatorString("micro: " + (end - start) + "bt: " + (bfAttack - start) + ", " + (bfTarget - bfAttack) + ", " + (bfScore - bfTarget) + ", " + (end - bfScore));
+
+    if (doPathfind) {
+      rlCounter = 0;
+      PathHelper.targetMove(lastTarget);
+    }
+    //rc.setIndicatorString("rlcounter: " + rlCounter + " / " + exploreTurns);
   }
 }
 
