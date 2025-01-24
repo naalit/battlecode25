@@ -31,9 +31,6 @@ public class Micro {
     };
   }
 
-  record TargetType(Supplier<Optional<MapLocation>> fun) {
-  }
-
   static boolean doTowers() {
     return rc.getChips() >= UnitType.LEVEL_ONE_PAINT_TOWER.moneyCost * 0.7 || nearbyAllies.length == 0;
   }
@@ -49,8 +46,10 @@ public class Micro {
       return new Target(map.closestPaintTower.loc, 2.0);
     if (map.closestFriendlyTower != null && bot.paint < minPaint() + bot.type.attackCost)
       return new Target(map.closestFriendlyTower.loc, 2.0);
-//    if (bot.type == UnitType.SOLDIER && map.ruinTarget != null && nearbyAllies.length == 0 && bot.paint < bot.type.attackCost * (24 - map.ruinTarget.allyTiles) + minPaint())
-//      return new Target(map.closestFriendlyTower.loc, 10.0);
+    if (bot.type == UnitType.SOLDIER && map.ruinTarget != null
+        && map.ruinTarget.lastSent == -1
+        && nearbyAllies.length == 0 && bot.paint < bot.type.attackCost * (24 - map.ruinTarget.allyTiles) + minPaint())
+      return new Target(map.closestFriendlyTower.loc, 2.0);
 
     // Help out panicking tower
     if (comms.panickingTower != null)

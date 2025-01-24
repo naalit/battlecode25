@@ -119,7 +119,7 @@ public class RobotPlayer {
         if (rc.getType().isTowerType()) {
           var nearbySoldiers = 0;
           var panicDist = 1000000;
-          for (var i : nearbyEnemies) {
+          for (var i : rc.senseNearbyRobots(UnitType.SOLDIER.actionRadiusSquared, rc.getTeam().opponent())) {
             if (i.type == UnitType.SOLDIER) {
               nearbySoldiers += 1;
               var d = i.location.distanceSquaredTo(rc.getLocation());
@@ -132,10 +132,16 @@ public class RobotPlayer {
           panicMode = nearbySoldiers >= 2 || (nearbySoldiers == 1 && rc.getHealth() < rc.getType().health / 3);
 
           nearbyFriendlySoldiers = 0;
+          var mopCount = 0;
           for (var i : nearbyAllies) {
             if (i.type == UnitType.SOLDIER) {
               nearbyFriendlySoldiers += 1;
+            } if (i.type == UnitType.MOPPER) {
+              mopCount += 1;
             }
+          }
+          if (mopCount >= nearbySoldiers) {
+            panicMode = false;
           }
         }
 

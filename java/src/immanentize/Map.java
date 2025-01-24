@@ -15,6 +15,7 @@ public class Map {
     public int roundSeen;
     public UnitType type;
     public int typeRound;
+    public int lastSent = -1;
 
     public Ruin(MapLocation loc) {
       center = loc;
@@ -24,7 +25,7 @@ public class Map {
       if (typeRound == rc.getRoundNum()) return type;
       typeRound = rc.getRoundNum();
 
-      var paintPercent = rc.getNumberTowers() < moneyTarget + 1 ? 0 : 80;
+      var paintPercent = rc.getNumberTowers() < moneyTarget + 1 ? 0 : 70;
 //      if (rc.getNumberTowers() < moneyTarget + 1) {
 //        type = UnitType.LEVEL_ONE_MONEY_TOWER;
 //      } else {
@@ -40,9 +41,10 @@ public class Map {
 //      // then paint tower
 //      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
 //      if (rc.getChips() > 10000) paintPercent = 100;
-      if (!map.isPaintTower && map.towers.size() > 2) {
-        paintPercent = 80;
-      }
+
+//      if (!map.isPaintTower && map.towers.size() > 2) {
+//        paintPercent = 80;
+//      }
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
@@ -87,6 +89,7 @@ public class Map {
     public Team team;
     public UnitType type;
     public int roundSeen;
+    public int lastSent = -1;
 
     public Tower(MapLocation loc, Team team, UnitType type) {
       this.loc = loc;
@@ -197,9 +200,9 @@ public class Map {
     tiles = new Tile[width][];
     resourcePattern = rc.getResourcePattern();
 
-    moneyTarget = 5;
-    if (height < 30 || width < 30) moneyTarget = 2;
-    if (height >= 35 && width >= 35) moneyTarget = 6;
+    moneyTarget = 4;
+    if (height < 30 || width < 30) moneyTarget = 3;
+    if (height >= 35 && width >= 35) moneyTarget = 5;
   }
 
   public Tile tile(MapLocation loc) {

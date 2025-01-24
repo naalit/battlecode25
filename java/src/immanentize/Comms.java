@@ -71,9 +71,11 @@ public class Comms {
             r.enemyTiles = 1;
             r.clearEnemyTilesOnSeen = true;
           }
+          if (r != null) r.lastSent = rc.getRoundNum();
         }
         case Tower -> {
-          map.tryAddTower(m.loc, m.team, m.towerType, m.round);
+          var r = map.tryAddTower(m.loc, m.team, m.towerType, m.round);
+          if (r != null) r.lastSent = rc.getRoundNum();
         }
         case RemoveWatchtower -> {
           if (rc.canRemoveMark(m.loc.add(Direction.NORTH))) {
@@ -109,11 +111,13 @@ public class Comms {
               var ruin = map.ruins.get(map.ruins.size() - i - 1);
               m = new Message(Message.Type.Ruin, ruin.center, ruin.roundSeen);
               m.hasEnemyTiles = ruin.enemyTiles != 0;
+              ruin.lastSent = rc.getRoundNum();
             } else {
               var tower = map.towers.get(i - map.ruins.size());
               m = new Message(Message.Type.Tower, tower.loc, tower.roundSeen);
               m.towerType = tower.type;
               m.team = tower.team;
+              tower.lastSent = rc.getRoundNum();
             }
             if (i == (mstart + 1) % mlength && rc.getType().isTowerType() && (RobotPlayer.wantsToChangeTowerType || RobotPlayer.turnsSinceSeenEnemy > 150)) {
               m.type = Message.Type.RemoveWatchtower;
