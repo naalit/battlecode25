@@ -11,39 +11,43 @@ import concurrent.futures
 ###
 
 TEAM1 = "immanentize"
-TEAM2 = "immanentize_check4"
+TEAM2 = "ims2"
 WITH_REVERSE = True
 SAVE_LOCATION = "./trial_logs/"
 #COMMAND = "gradlew"
 COMMAND = "./gradlew"
-MAX_WORKERS = 3
+MAX_WORKERS = 5
 
 # when run mapnames() replace between example and closing bracket
 DEFAULT_MAPS = [
-"DefaultHuge",
-"DefaultLarge",
-"DefaultMedium",
-"DefaultSmall",
-"Fossil",
-"Gears",
-"Justice",
-"Mirage",
-"Money",
-"MoneyTower",
-"Racetrack",
-"Restart",
-"SMILE",
-"SaltyPepper",
-"TargetPractice",
-"Thirds",
-"UglySweater",
-"UnderTheSea",
-"catface",
-"gardenworld",
-"memstore"
+    #"DefaultHuge",
+    "DefaultLarge",
+    #"DefaultMedium",
+    #"DefaultSmall",
+    "Fossil",
+    "Gears",
+    #"Justice",
+    "Mirage",
+    "Money",
+    #"MoneyTower",
+    #"Racetrack",
+    "Restart",
+    #"SMILE",
+    "SaltyPepper",
+    "TargetPractice",
+    "Thirds",
+    #"UglySweater",
+    "UnderTheSea",
+    "catface",
+    "gardenworld",
+    #"memstore",
+    "gardenworld",
+    "sierpinski",
+    "fix",
+    "galaxy",
 ]
 MAPS_TO_RUN = DEFAULT_MAPS + [
-    "Crossed",
+    #"Crossed",
     "TicTacToe"
 ]
 
