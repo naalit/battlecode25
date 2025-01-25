@@ -42,13 +42,13 @@ public class Map {
 //      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
 //      if (rc.getChips() > 10000) paintPercent = 100;
 
-//      if (!map.isPaintTower /*&& map.towers.size() > 2*/) {
-//        paintPercent = 80;
-//      }
+      if (!map.isPaintTower && rc.getNumberTowers() > (moneyTarget + 1) / 2) {
+        paintPercent = 80;
+      }
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
-      if (rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
+      if (rc.getNumberTowers() > (moneyTarget + 1) / 2 && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
       }
       return type;

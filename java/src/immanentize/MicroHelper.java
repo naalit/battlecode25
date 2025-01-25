@@ -2039,6 +2039,11 @@ public class MicroHelper {
     var moveLocs = new MapLocation[9];
     var moveScores = new double[9];
     var cost = UnitType.SPLASHER.attackCost * FREE_PAINT_VALUE;
+    // Allow painting over just one enemy tile when on ruins
+//    if (map.ruinTarget != null && map.ruinTarget.center.isWithinDistanceSquared(rc.getLocation(), 8)
+//        && map.ruinTarget.enemyTiles > 0 && map.ruinTarget.enemyTiles < 8) {
+//      cost = 1.2 * MAP_PAINT_VALUE;
+//    }
 
     loc = center.translate(-1, -1);
     if (rc.onTheMap(loc) && rc.senseMapInfo(loc).isPassable() && !rc.canSenseRobotAtLocation(loc)) {

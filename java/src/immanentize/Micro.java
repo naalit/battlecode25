@@ -75,7 +75,7 @@ public class Micro {
       }
     }
 
-    if (map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
+    if (rc.getNumberTowers() > (map.moneyTarget + 1) / 2 && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
         && map.isPaintTower && (!doTowers() || map.ruinTarget == null/* || (rc.getID() % 3 == 0 && rc.getNumberTowers() > 5)*/) && bot.startPos.isWithinDistanceSquared(map.closestRP.center, 8)) {
       return new Target(map.closestRP.center, 1.0);
     }
@@ -98,7 +98,7 @@ public class Micro {
     }
 
     // Soldier: target nearly-full resource pattern
-    if (map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null || (rc.getID() % 5 == 0 && map.isPaintTower))) {
+    if (rc.getNumberTowers() > (map.moneyTarget + 1) / 2 && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null || (rc.getID() % 5 == 0 && map.isPaintTower))) {
       return new Target(map.closestRP.center, 1);
     }
 
