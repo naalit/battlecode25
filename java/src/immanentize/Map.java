@@ -42,7 +42,7 @@ public class Map {
 //      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
 //      if (rc.getChips() > 10000) paintPercent = 100;
 
-//      if (!map.isPaintTower && map.towers.size() > 2) {
+//      if (!map.isPaintTower /*&& map.towers.size() > 2*/) {
 //        paintPercent = 80;
 //      }
 
@@ -316,21 +316,23 @@ public class Map {
 
     ruinTarget = null;
     var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
-    if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
-      for (var ruin : ruins) {
-        if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0 || (rc.getNumberTowers() > 4 && rc.getID() % 7 < 2)) &&
-            (rc.getType() == UnitType.SOLDIER || ruin.enemyTiles > 0 || rc.getID() % 4 == 0) &&
-            (rc.getType() != UnitType.SPLASHER || ruin.enemyTiles >= 3 || ruin.clearEnemyTilesOnSeen || rc.getID() % 4 == 0)) {
-          var d = ruin.center.distanceSquaredTo(rc.getLocation());
-          if (d < bestD || (rc.getType() != UnitType.SOLDIER && ruinTarget != null && ruinTarget.enemyTiles > 0 && ruin.enemyTiles == 0)) {
-            rc.setIndicatorDot(ruin.center, 255, 255, 255);
-            ruinTarget = ruin;
-            bestD = d;
+    if (rc.getType() != UnitType.SPLASHER || rc.getID() % 3 != 0) {
+      if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
+        for (var ruin : ruins) {
+          if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0 || (rc.getNumberTowers() > 4 && rc.getID() % 7 < 2)) &&
+              (rc.getType() == UnitType.SOLDIER || ruin.enemyTiles > 0 || rc.getID() % 4 == 0) &&
+              (rc.getType() != UnitType.SPLASHER || ruin.enemyTiles >= 3 || ruin.clearEnemyTilesOnSeen || rc.getID() % 4 == 0)) {
+            var d = ruin.center.distanceSquaredTo(rc.getLocation());
+            if (d < bestD || (rc.getType() != UnitType.SOLDIER && ruinTarget != null && ruinTarget.enemyTiles == 0 && ruin.enemyTiles > 0)) {
+              rc.setIndicatorDot(ruin.center, 255, 255, 255);
+              ruinTarget = ruin;
+              bestD = d;
+            } else {
+              rc.setIndicatorDot(ruin.center, 255, 0, 255);
+            }
           } else {
             rc.setIndicatorDot(ruin.center, 255, 0, 255);
           }
-        } else {
-          rc.setIndicatorDot(ruin.center, 255, 0, 255);
         }
       }
     }

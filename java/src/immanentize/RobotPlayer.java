@@ -207,10 +207,10 @@ public class RobotPlayer {
             if (rc.getRoundNum() < 4) {
               toSpawn = UnitType.SOLDIER;
             }
-            if (rc.getRoundNum() < 30 || spawnCount == 0 || rc.getChips() > 1200 || panicMode) {
+            if (rc.getRoundNum() < 20 || /*spawnCount == 0 ||*/ rc.getChips() > 1200 || panicMode) {
               if (panicMode) toSpawn = UnitType.MOPPER;
               if (toSpawn == null && (nearbyAllies.length < 12)) {
-                var splasherChance = 1.0 / 8.0;
+                var splasherChance = 1.0 / 7.0;
                 // after splashers have been ruled out
                 var mopperChance = 1.0 / 5.0;
                 // More splashers on bigger maps
@@ -225,7 +225,7 @@ public class RobotPlayer {
                 } else if (rc.getRoundNum() < 30) {
                   mopperChance = 0;
                 }
-                if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 80) {
+                if (rc.getNumberTowers() < 3 || rc.getRoundNum() < 60) {
                   splasherChance = 0;
                 }
                 if (rc.getNumberTowers() > map.moneyTarget) {
