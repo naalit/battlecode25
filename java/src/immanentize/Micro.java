@@ -64,7 +64,7 @@ public class Micro {
     if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= 50 + MIN_TRANSFER_MOPPER) {
       RobotInfo best = null;
       for (var x : nearbyAllies) {
-        if (x.getType().isRobotType() && x.getType() != UnitType.MOPPER && x.paintAmount < x.getType().paintCapacity) {
+        if (x.getType().isRobotType() && (x.getType() != UnitType.MOPPER || x.getPaintAmount() < MOPPER_PAINT_MIN) && x.paintAmount < x.getType().paintCapacity) {
           if (best == null || x.paintAmount < best.paintAmount) {
             best = x;
           }
@@ -111,9 +111,9 @@ public class Micro {
     }
 
     // Soldier(/splasher?): target enemy towers
-    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
-      return new Target(map.closestEnemyTower.loc, 1);
-    }
+//    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
+//      return new Target(map.closestEnemyTower.loc, 1);
+//    }
 
     if (map.ruinTarget != null && bot.type != UnitType.SOLDIER
         //&& (map.ruinTarget.enemyTiles > 0 || rc.getID() % 4 == 0)

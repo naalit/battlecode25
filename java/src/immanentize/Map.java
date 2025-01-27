@@ -315,8 +315,9 @@ public class Map {
     }
 
     ruinTarget = null;
-    var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
-    if (rc.getType() != UnitType.SPLASHER || rc.getID() % 3 != 0) {
+    //var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
+    var bestD = (height / 3) * (height / 3) + (width / 3) * (width / 3);
+    if (rc.getType() != UnitType.SPLASHER){// || rc.getID() % 3 != 0) {
       if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
         for (var ruin : ruins) {
           if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0 || (rc.getNumberTowers() > 4 && rc.getID() % 7 < 2)) &&
