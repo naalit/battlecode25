@@ -200,9 +200,9 @@ public class Map {
     tiles = new Tile[width][];
     resourcePattern = rc.getResourcePattern();
 
-    moneyTarget = 4;
-    if (height < 30 || width < 30) moneyTarget = 3;
-    if (height >= 35 && width >= 35) moneyTarget = 5;
+    moneyTarget = 5;
+    if (height < 30 || width < 30) moneyTarget = 2;
+//    if (height >= 45 && width >= 45) moneyTarget = 6;
   }
 
   public Tile tile(MapLocation loc) {
@@ -320,7 +320,7 @@ public class Map {
     ruinTarget = null;
     //var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
     var bestD = (height / 3) * (height / 3) + (width / 3) * (width / 3);
-    if (rc.getType() != UnitType.SPLASHER){// || rc.getID() % 3 != 0) {
+    if (rc.getType() != UnitType.SPLASHER) {// || rc.getID() % 3 != 0) {
       if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
         for (var ruin : ruins) {
           if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0 || (rc.getNumberTowers() > 4 && rc.getID() % 7 < 2)) &&

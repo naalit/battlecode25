@@ -75,13 +75,13 @@ public class Micro {
       }
     }
 
-    if (rc.getNumberTowers() > (map.moneyTarget + 1) / 2 && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
+    if (rc.getNumberTowers() >= (map.moneyTarget + 1) && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
         && map.isPaintTower && (!doTowers() || map.ruinTarget == null/* || (rc.getID() % 3 == 0 && rc.getNumberTowers() > 5)*/) && bot.startPos.isWithinDistanceSquared(map.closestRP.center, 8)) {
       return new Target(map.closestRP.center, 1.0);
     }
 
     // Soldier: target unpainted tower squares
-    if (map.ruinTarget != null /*&& doTowers()*/ && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost) {
+    if (map.ruinTarget != null && doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost) {
       MapLocation[] corners = {map.ruinTarget.center.translate(-2, -2), map.ruinTarget.center.translate(2, -2), map.ruinTarget.center.translate(-2, 2), map.ruinTarget.center.translate(2, 2)};
       for (var loc : corners) {
         if (!rc.canSenseLocation(loc)) continue;
@@ -91,14 +91,14 @@ public class Micro {
       }
     }
 
-    if (map.ruinTarget != null /*&& doTowers()*/ && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getLocation().isWithinDistanceSquared(map.ruinTarget.center, 8)) {
+    if (map.ruinTarget != null && doTowers() && rc.getType() == UnitType.SOLDIER && rc.getPaint() >= minPaint() + rc.getType().attackCost && rc.getLocation().isWithinDistanceSquared(map.ruinTarget.center, 8)) {
       var dx = rc.getLocation().x == map.ruinTarget.center.x ? (rc.getLocation().y > map.ruinTarget.center.y ? 1 : -1) : 0;
       var dy = rc.getLocation().y == map.ruinTarget.center.y ? (rc.getLocation().x > map.ruinTarget.center.x ? -1 : 1) : 0;
       return new Target(map.ruinTarget.center.translate(dx, dy), 1.0);
     }
 
     // Soldier: target nearly-full resource pattern
-    if (rc.getNumberTowers() >= (map.moneyTarget + 1) / 2 && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null || (rc.getID() % 5 == 0 && map.isPaintTower))) {
+    if (rc.getNumberTowers() >= (map.moneyTarget + 1) && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost) && (!doTowers() || map.ruinTarget == null || (rc.getID() % 5 == 0 && map.isPaintTower))) {
       return new Target(map.closestRP.center, 1);
     }
 
