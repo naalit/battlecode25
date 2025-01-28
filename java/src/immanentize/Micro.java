@@ -75,7 +75,7 @@ public class Micro {
       }
     }
 
-    if (/*rc.getNumberTowers() > (map.moneyTarget - 1) / 2 &&*/ map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
+    if (rc.getNumberTowers() > (map.moneyTarget + 1) / 2 && map.closestRP != null && bot.type == UnitType.SOLDIER && (bot.paint >= minPaint() + bot.type.attackCost)
         && map.isPaintTower && (!doTowers() || map.ruinTarget == null/* || (rc.getID() % 3 == 0 && rc.getNumberTowers() > 5)*/) && bot.startPos.isWithinDistanceSquared(map.closestRP.center, 8)) {
       return new Target(map.closestRP.center, 1.0);
     }
@@ -111,9 +111,9 @@ public class Micro {
     }
 
     // Soldier(/splasher?): target enemy towers
-//    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
-//      return new Target(map.closestEnemyTower.loc, 1);
-//    }
+    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
+      return new Target(map.closestEnemyTower.loc, 1);
+    }
 
     if (map.ruinTarget != null && bot.type != UnitType.SOLDIER
         //&& (map.ruinTarget.enemyTiles > 0 || rc.getID() % 4 == 0)
@@ -518,7 +518,6 @@ public class Micro {
         exploreTurns = 10;
       }
     }
-    // always do this
     if (rc.isActionReady()) {
       doAttack(loc.attack);
     }

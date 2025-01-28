@@ -11,7 +11,7 @@ import concurrent.futures
 ###
 
 TEAM1 = "immanentize"
-TEAM2 = "ims2"
+TEAM2 = "ims4"
 WITH_REVERSE = True
 SAVE_LOCATION = "./trial_logs/"
 #COMMAND = "gradlew"
@@ -20,31 +20,81 @@ MAX_WORKERS = 5
 
 # when run mapnames() replace between example and closing bracket
 DEFAULT_MAPS = [
-    #"DefaultHuge",
+    "AlarmClock",
+#     "Barcode",
+#     "BatSignal",
+    "Brat",
+#     "Bread",
+#     "Bunny",
+    "BunnyGame",
+#     "Castle",
+#     "CastleDefense",
+    "Circuit",
+#     "Crab",
+#     "DefaultHuge",
     "DefaultLarge",
-    #"DefaultMedium",
-    #"DefaultSmall",
-    "Fossil",
+#     "DefaultMedium",
+#     "DefaultSmall",
+    "Dominoes",
+#     "DonkeyKong",
+#     "Filter",
+    "Flower",
+#     "Fossil",
+#     "FourCorners",
     "Gears",
-    #"Justice",
-    "Mirage",
+#     "HungerGames",
+#     "Jail",
+    "Justice",
+#     "Leaf",
+#     "Mirage",
     "Money",
-    #"MoneyTower",
-    #"Racetrack",
+#     "MoneyTower",
+#     "Oasis",
+    "Paintball",
+#     "Parking_lot",
+#     "Piglets2",
+    "PlumberGame",
+#     "Portal",
+#     "Racetrack",
     "Restart",
-    #"SMILE",
+#     "Rose",
+#     "SMILE",
     "SaltyPepper",
-    "TargetPractice",
+#     "SandyBeach",
+#     "Snowglobe",
+    "Snowman",
+#     "TargetPractice",
+#     "Terminal",
+#     "TheBest",
     "Thirds",
-    #"UglySweater",
+#     "UglySweater",
     "UnderTheSea",
+#     "box",
+#     "boxofchocolates",
     "catface",
-    "gardenworld",
-    #"memstore",
-    "gardenworld",
-    "sierpinski",
-    "fix",
+#     "defensetower",
+#     "fix",
     "galaxy",
+#     "gardenworld",
+#     "giver",
+    "gridworld",
+#     "headphones",
+#     "leavemealone",
+    "lighthouse",
+#     "maze",
+#     "memstore",
+    "mit",
+#     "quack",
+#     "rain",
+    "roads",
+#     "sayhi",
+#     "shell",
+    "sierpinski",
+#     "starburst",
+#     "sunrise",
+    "walalilongla",
+#     "windmill",
+#     "yearofthesnake"
 ]
 MAPS_TO_RUN = DEFAULT_MAPS + [
     #"Crossed",
@@ -71,9 +121,11 @@ def runmatch(team1, team2, subfolder):
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS) as ex:
         ct = len(MAPS_TO_RUN)
-        results = [ex.submit(runsingle, (team1, team2, map_name, subfolder)) for map_name in MAPS_TO_RUN]
         if WITH_REVERSE:
-            results += [ex.submit(runsingle, (team2, team1, map_name, subfolder)) for map_name in MAPS_TO_RUN]
+            ct *= 2
+        results = [ex.submit(runsingle, (team1, team2, map_name, subfolder, False)) for map_name in MAPS_TO_RUN]
+        if WITH_REVERSE:
+            results += [ex.submit(runsingle, (team2, team1, map_name, subfolder, True)) for map_name in MAPS_TO_RUN]
 
         for future in concurrent.futures.as_completed(results):
             t1, t2, b = future.result()
@@ -90,7 +142,7 @@ def runmatch(team1, team2, subfolder):
     return header + body
 
 def runsingle(arg):
-    team1, team2, map_name, subfolder = arg
+    team1, team2, map_name, subfolder, is_reverse = arg
     print(f"START {team1} vs. {team2} on {map_name}")
     arg = f"{COMMAND} run -Pmaps=\"{map_name}\" -PteamA=\"{team1}\" -PteamB=\"{team2}\""
 
@@ -121,6 +173,8 @@ def runsingle(arg):
         file.write(output)
 
     print(f"END   {team1} vs. {team2} on {map_name}")
+    if is_reverse:
+        t1, t2 = t2, t1
     return (t1, t2, body)
 
 # print list of maps for MAPS_TO_RUN for when new maps made

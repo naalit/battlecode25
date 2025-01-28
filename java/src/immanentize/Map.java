@@ -48,7 +48,7 @@ public class Map {
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
-      if (rc.getNumberTowers() > (moneyTarget + 1) / 2 && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
+      if (rc.getNumberTowers() >= (moneyTarget + 1) && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
       }
       return type;
@@ -300,10 +300,13 @@ public class Map {
       var ruin = tryAddRuin(ruinLoc, rc.getRoundNum());
       ruin.update();
       if (ruin.allyTiles == 24) {
-        if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && (rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly() || rc.canMark(ruinLoc.add(Direction.NORTH)))) {
+        var doWatchtower = rc.getNumberTowers() >= (moneyTarget + 1);
+        if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && (!doWatchtower || rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly() || rc.canMark(ruinLoc.add(Direction.NORTH)))) {
           rc.completeTowerPattern(ruin.type(), ruinLoc);
           rc.setTimelineMarker("Tower built", 0, 255, 0);
-          rc.mark(ruinLoc.add(Direction.NORTH), /*rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly()*/ true);
+          if (doWatchtower) {
+            rc.mark(ruinLoc.add(Direction.NORTH), /*rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly()*/ true);
+          }
         }
       }
     }

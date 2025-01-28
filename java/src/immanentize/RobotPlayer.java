@@ -99,6 +99,7 @@ public class RobotPlayer {
   static MapLocation panicTarget = null;
   static int nearbyFriendlySoldiers;
   static int splasherStartTurn = -1;
+  static int mopCount = 0;
 
   public static void run(RobotController rc) throws GameActionException {
     RobotPlayer.rc = rc;
