@@ -55,7 +55,7 @@ public class RobotPlayer {
   }
 
   static int towerKeepPaint() {
-    return rc.getNumberTowers() > 3 ? 0 : 100;
+    return 0;//rc.getNumberTowers() > 3 ? 0 : 100;
   }
 
   static final int MIN_TRANSFER_TOWER = 50;
