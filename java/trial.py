@@ -11,7 +11,7 @@ import concurrent.futures
 ###
 
 TEAM1 = "immanentize"
-TEAM2 = "ims6"
+TEAM2 = "imz"
 WITH_REVERSE = True
 SAVE_LOCATION = "./trial_logs/"
 #COMMAND = "gradlew"

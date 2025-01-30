@@ -155,9 +155,9 @@ public class RobotPlayer {
         //if (rc.getType() != UnitType.SOLDIER && rc.getType() != UnitType.SPLASHER)
         comms.update();
 
-//        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 30 == 0) {
-//          Micro.exploreTarget = exploreLocs[rng() % exploreLocs.length];
-//        }
+        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 20 == 0) {
+          Micro.exploreTarget = exploreLocs[rng() % exploreLocs.length];
+        }
         // Making sure columns in view are initialized before the turn starts so we can optimize checks to `tiles[x][y]`
         for (int x = -4; x < 5; x++) {
           var loc = rc.getLocation().translate(x, 0);
@@ -234,13 +234,13 @@ public class RobotPlayer {
                 }
                 if (rc.getNumberTowers() > map.moneyTarget) {
                   if (splasherStartTurn == -1) splasherStartTurn = rc.getRoundNum();
-//                  if (rc.getRoundNum() > splasherStartTurn + 20) {
-                  splasherChance = 1 / 2.0;
-                  mopperChance = 2 / 5.0;
-//                  } else {
-//                    splasherChance = 2 / 3.0;
-//                    mopperChance = 1 / 2.0;
-//                  }
+                  if (rc.getRoundNum() > splasherStartTurn + 20) {
+                    splasherChance = 1 / 2.0;
+                    mopperChance = 2 / 5.0;
+                  } else {
+                    splasherChance = 2 / 3.0;
+                    mopperChance = 1 / 2.0;
+                  }
                 } else {
                   splasherStartTurn = -1;
                 }

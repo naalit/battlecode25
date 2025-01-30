@@ -26,7 +26,8 @@ public class Map {
       if (typeRound == rc.getRoundNum()) return type;
       var oldType = type;
       typeRound = rc.getRoundNum();
-      var nmoney = rc.getNumberTowers() - 1; //numMoneyTowers + Math.max(0, numUnknownTowers - 1);
+      var nmoney = rc.getNumberTowers() - 1;
+        //numMoneyTowers + Math.max(0, numUnknownTowers - 1);
 
       var paintPercent = nmoney < moneyTarget ? 0 : 70;
 //      if (rc.getNumberTowers() < moneyTarget + 1) {
@@ -341,7 +342,7 @@ public class Map {
     ruinTarget = null;
     //var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
     //var bestD = (height / 3) * (height / 3) + (width / 3) * (width / 3);
-    var bestD = 145;
+    var bestD = 197;
     if (rc.getType() != UnitType.SPLASHER) {// || rc.getID() % 3 == 2) {
       if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
         for (var ruin : ruins) {
