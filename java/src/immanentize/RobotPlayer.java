@@ -231,13 +231,13 @@ public class RobotPlayer {
                 }
                 if (rc.getNumberTowers() > map.moneyTarget) {
                   if (splasherStartTurn == -1) splasherStartTurn = rc.getRoundNum();
-                  if (rc.getRoundNum() > splasherStartTurn + 20) {
+//                  if (rc.getRoundNum() > splasherStartTurn + 20) {
                     splasherChance = 3 / 5.0;
                     mopperChance = 2 / 5.0;
-                  } else {
-                    splasherChance = 2 / 3.0;
-                    mopperChance = 1 / 2.0;
-                  }
+//                  } else {
+//                    splasherChance = 2 / 3.0;
+//                    mopperChance = 1 / 2.0;
+//                  }
                 } else {
                   splasherStartTurn = -1;
                 }

@@ -59,6 +59,25 @@ public class Micro {
 //        return new Target(map.closestFriendlyTower.loc, 2.0);
     }
 
+    // Mopper: find nearby *enemy*
+    if (rc.getType() == UnitType.MOPPER && rc.getPaint() >= minPaint()) {
+      RobotInfo best = null;
+      var bestD = 10000;
+      for (var x : nearbyEnemies) {
+        if (x.getType().isRobotType() && x.getType() != UnitType.MOPPER) {
+          var d = x.location.distanceSquaredTo(bot.startPos);
+          //if (best == null || best.paintAmount > x.paintAmount || (best.paintAmount == x.paintAmount && d < bestD)) {
+          if (best == null || d < bestD) {
+            best = x;
+            bestD = d;
+          }
+        }
+      }
+      if (best != null) {
+        return new Target(best.location, 1.0);
+      }
+    }
+
     // Help out panicking tower
     if (comms.panickingTower != null)
       return new Target(comms.panickingTower, 1);
@@ -114,14 +133,14 @@ public class Micro {
     }
 
     // Soldier(/splasher?): target enemy towers
-    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length > 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
+    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length >= 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
       return new Target(map.closestEnemyTower.loc, 1);
     }
 
     if (map.ruinTarget != null && bot.type != UnitType.SOLDIER
         //&& (map.ruinTarget.enemyTiles > 0 || rc.getID() % 4 == 0)
         && (rc.getID() % 4 <= 1 || !map.isPaintTower/* || rc.getNumberTowers() <= 5*/
-            || (bot.type == UnitType.MOPPER && map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 34) && map.ruinTarget.enemyTiles > 0))
+        || (bot.type == UnitType.MOPPER && map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 34) && map.ruinTarget.enemyTiles > 0))
         /*&& doTowers()*/ && !map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 8)) {
       return new Target(map.ruinTarget.center, 1.0);
     }
