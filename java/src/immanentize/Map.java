@@ -196,18 +196,21 @@ public class Map {
   }
 
   public MapLocation findUnvisitedTile() {
+    //if (rc.getID() % 17 < 4) return null;
     int bx = 0, by = 0;
-    int best = 3000;
+    int best = Math.max(1, rc.getRoundNum() - 50);
+    boolean found = false;
     for (int i = 0; i < 8; i++) {
       int cx = rng() % (width / 5), cy = rng() % (height / 5);
       var t = visitedTiles[cx][cy];
       if (t < best) {
+        found = true;
         bx = cx;
         by = cy;
         best = t;
       }
     }
-    return best == 3000 ? null : new MapLocation(bx * 5 + 3, by * 5 + 3);
+    return !found ? null : new MapLocation(bx * 5 + 3, by * 5 + 3);
   }
 
   public int moneyTarget;

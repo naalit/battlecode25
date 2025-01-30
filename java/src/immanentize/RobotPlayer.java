@@ -152,6 +152,7 @@ public class RobotPlayer {
 
         map.update();
         var q = Clock.getBytecodeNum();
+        //if (rc.getType() != UnitType.SOLDIER && rc.getType() != UnitType.SPLASHER)
         comms.update();
 
 //        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 30 == 0) {
@@ -170,6 +171,8 @@ public class RobotPlayer {
             Micro.doMicro();
 
             maybeReplenishPaint();
+
+            //comms.update();
           }
           case MOPPER -> {
             Micro.doMicro();
@@ -232,8 +235,8 @@ public class RobotPlayer {
                 if (rc.getNumberTowers() > map.moneyTarget) {
                   if (splasherStartTurn == -1) splasherStartTurn = rc.getRoundNum();
 //                  if (rc.getRoundNum() > splasherStartTurn + 20) {
-                    splasherChance = 1 / 2.0;
-                    mopperChance = 2 / 5.0;
+                  splasherChance = 1 / 2.0;
+                  mopperChance = 2 / 5.0;
 //                  } else {
 //                    splasherChance = 2 / 3.0;
 //                    mopperChance = 1 / 2.0;
@@ -273,18 +276,24 @@ public class RobotPlayer {
                 rc.setIndicatorString("chance: " + splasherChance + " / " + mopperChance + " --> " + toSpawn + " (sample " + (rng() % 100) + ")");
               }
               if (toSpawn != null && rc.getPaint() >= toSpawn.paintCost + (panicMode ? 0 : towerKeepPaint())) {
+                var center = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
                 Direction bdir = null;
                 var selfPaint = false;
                 var panicDist = 100000;
+                var cdist = 10000;
                 // Spawn on our paint if possible
                 for (var dir : MOVE_DIRECTIONS) {
                   if (rc.canBuildRobot(toSpawn, rc.getLocation().add(dir))) {
                     var d = panicMode ? panicTarget.distanceSquaredTo(rc.getLocation().add(dir)) : 0;
                     var paint = rc.senseMapInfo(rc.getLocation().add(dir)).getPaint().isAlly();
-                    if (bdir == null || d < panicDist || (d == panicDist && !selfPaint && paint)) {
+                    var cd = center.distanceSquaredTo(rc.getLocation().add(dir));
+                    if (bdir == null || d < panicDist ||
+                        (d == panicDist && !selfPaint && paint) ||
+                        (d == panicDist && selfPaint == paint && cd < cdist)) {
                       bdir = dir;
                       selfPaint = paint;
                       panicDist = d;
+                      cdist = cd;
                     }
                   }
                 }

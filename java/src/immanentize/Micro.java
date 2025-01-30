@@ -133,7 +133,8 @@ public class Micro {
     }
 
     // Soldier(/splasher?): target enemy towers
-    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length >= 1 && bot.paint >= minPaint() + bot.type.attackCost * 3) {
+    if (map.closestEnemyTower != null && bot.type != UnitType.MOPPER && nearbyAllies.length >= 1 && bot.paint >= minPaint() + bot.type.attackCost * 3
+        && map.closestEnemyTower.loc.isWithinDistanceSquared(bot.startPos, 197)) {
       return new Target(map.closestEnemyTower.loc, 1);
     }
 
