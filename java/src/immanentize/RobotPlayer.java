@@ -152,10 +152,10 @@ public class RobotPlayer {
 
         map.update();
         var q = Clock.getBytecodeNum();
-        //if (rc.getType() != UnitType.SOLDIER && rc.getType() != UnitType.SPLASHER)
-        comms.update();
+        if (rc.getType() != UnitType.SOLDIER && rc.getType() != UnitType.SPLASHER)
+          comms.update();
 
-        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 20 == 0) {
+        if (rc.getType() == UnitType.SOLDIER && Micro.exploreTarget == null && rng() % 23 == 0) {
           Micro.exploreTarget = exploreLocs[rng() % exploreLocs.length];
         }
         // Making sure columns in view are initialized before the turn starts so we can optimize checks to `tiles[x][y]`
@@ -172,7 +172,7 @@ public class RobotPlayer {
 
             maybeReplenishPaint();
 
-            //comms.update();
+            comms.update();
           }
           case MOPPER -> {
             Micro.doMicro();

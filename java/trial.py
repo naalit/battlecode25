@@ -139,6 +139,7 @@ def runmatch(team1, team2, subfolder):
                 print("all complete")
 
     header += f"result: {team1} ({t1wins} - {t2wins}) {team2}\n"
+    print(header)
     return header + body
 
 def runsingle(arg):
