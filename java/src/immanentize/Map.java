@@ -16,6 +16,7 @@ public class Map {
     public UnitType type;
     public int typeRound;
     public int lastSent = -1;
+    public boolean resetOnUpdate = false;
 
     public Ruin(MapLocation loc) {
       center = loc;
@@ -23,8 +24,9 @@ public class Map {
 
     public UnitType type() throws GameActionException {
       if (typeRound == rc.getRoundNum()) return type;
+      var oldType = type;
       typeRound = rc.getRoundNum();
-      var nmoney = rc.getNumberTowers() - 1; //numMoneyTowers + Math.max(0, numUnknownTowers);
+      var nmoney = numMoneyTowers + Math.max(0, numUnknownTowers - 1);
 
       var paintPercent = nmoney < moneyTarget ? 0 : 70;
 //      if (rc.getNumberTowers() < moneyTarget + 1) {
@@ -49,8 +51,11 @@ public class Map {
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
-      if (nmoney >= (moneyTarget) && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
+      if (rc.getNumberTowers() - 1 >= (moneyTarget) && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
+      }
+      if (type != oldType) {
+        resetOnUpdate = true;
       }
       return type;
     }
@@ -65,21 +70,28 @@ public class Map {
         enemyTiles -= 1;
         clearEnemyTilesOnSeen = false;
       }
-      var us = rc.getTeam();
-      var them = us.opponent();
+      if (resetOnUpdate) {
+        enemyTiles = 0;
+        allyTiles = 0;
+        for (var x = -2; x < 3; x++) {
+          for (var y = -2; y < 3; y++) {
+            tile(center.translate(x, y)).paint = PaintType.EMPTY;
+          }
+        }
+        resetOnUpdate = false;
+      }
       for (var loc : rc.senseNearbyMapInfos(center, 8)) {
         var paint = loc.getPaint();
-        var p = paint.isAlly() ? us :
-            paint.isEnemy() ? them : null;
-        if (tiles[loc.getMapLocation().x][loc.getMapLocation().y].paintTeam != p) {
-          var old = tile(loc.getMapLocation()).paintTeam;
+        if (tiles[loc.getMapLocation().x][loc.getMapLocation().y].paint != paint) {
+          var old = tile(loc.getMapLocation()).paint;
+          var correct = secondary(loc.getMapLocation()) ? PaintType.ALLY_SECONDARY : PaintType.ALLY_PRIMARY;
 
-          if (old == us) allyTiles -= 1;
-          else if (old == them) enemyTiles -= 1;
-          if (p == us) allyTiles += 1;
-          else if (p == them) enemyTiles += 1;
+          if (old == correct) allyTiles -= 1;
+          else if (old.isEnemy()) enemyTiles -= 1;
+          if (paint == correct) allyTiles += 1;
+          else if (paint.isEnemy()) enemyTiles += 1;
 
-          tile(loc.getMapLocation()).paintTeam = p;
+          tile(loc.getMapLocation()).paint = paint;
         }
       }
     }
@@ -137,7 +149,7 @@ public class Map {
     public Ruin ruin;
     public boolean canBeRP = true;
     public int nextRPCheck;
-    public Team paintTeam;
+    public PaintType paint = PaintType.EMPTY;
     public ResourcePattern rp;
 
     public Tile(MapLocation loc) {

@@ -241,6 +241,9 @@ public class RobotPlayer {
                 } else {
                   splasherStartTurn = -1;
                 }
+                if (!panicMode && mopCount >= Math.max(2, nearbyAllies.length / 3)) {
+                  mopperChance = 0;
+                }
 //                if (mopCount == 0 && map.ruinTarget != null && map.ruinTarget.enemyTiles > 0) {
 //                  mopperChance *= 3.0 / 2;
 //                }
