@@ -232,7 +232,7 @@ public class RobotPlayer {
                 if (rc.getNumberTowers() > map.moneyTarget) {
                   if (splasherStartTurn == -1) splasherStartTurn = rc.getRoundNum();
 //                  if (rc.getRoundNum() > splasherStartTurn + 20) {
-                    splasherChance = 3 / 5.0;
+                    splasherChance = 1 / 2.0;
                     mopperChance = 2 / 5.0;
 //                  } else {
 //                    splasherChance = 2 / 3.0;

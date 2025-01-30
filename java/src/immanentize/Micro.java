@@ -299,7 +299,7 @@ public class Micro {
       if (bot.paint < minPaint() + UnitType.SOLDIER.attackCost) return;
       var mscore = 0.0;
       var cost = bot.type.attackCost * (1 - (double) bot.paint / bot.type.paintCapacity + FREE_PAINT_FIXED_VALUE) * FREE_PAINT_VALUE;
-      if (!map.isPaintTower) cost = MAP_PAINT_VALUE * 1.1;
+      if (!map.isPaintTower || rc.getNumberTowers() < map.moneyTarget) cost = MAP_PAINT_VALUE * 1.2;
       var ptile = lastTarget == null ? null : bot.startPos.add(bot.startPos.directionTo(lastTarget));
       var rtarget = map.ruinTarget != null ? map.ruinTarget.center : new MapLocation(70, 70);
       var rptarget = map.closestRP != null ? map.closestRP.center : new MapLocation(70, 70);
@@ -316,12 +316,12 @@ public class Micro {
             v = 2 * MAP_PAINT_VALUE;
         } else if (rptarget.isWithinDistanceSquared(l, 8)) {
           if (p == PaintType.EMPTY || p.isSecondary() != map.closestRP.secondary(l))
-            v = 1.5 * MAP_PAINT_VALUE;
+            v = (rc.getNumberTowers() >= map.moneyTarget ? 1.5 : 1.1) * MAP_PAINT_VALUE;
         } else if (p == PaintType.EMPTY) {
           v = MAP_PAINT_VALUE;
         }
-        if (l.equals(ptile)) {
-          v *= 1.2;
+        if (l.equals(ptile) || l.equals(bot.startPos)) {
+          v *= 1.3;
         }
         v -= cost;
 

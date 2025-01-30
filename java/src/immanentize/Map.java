@@ -322,7 +322,7 @@ public class Map {
         if (rc.canCompleteTowerPattern(ruin.type(), ruinLoc) && (!doWatchtower || rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly() || rc.canMark(ruinLoc.add(Direction.NORTH)))) {
           rc.completeTowerPattern(ruin.type(), ruinLoc);
           rc.setTimelineMarker("Tower built", 0, 255, 0);
-          if (doWatchtower) {
+          if (doWatchtower && !rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly()) {
             rc.mark(ruinLoc.add(Direction.NORTH), /*rc.senseMapInfo(ruinLoc.add(Direction.NORTH)).getMark().isAlly()*/ true);
           }
         }
@@ -339,7 +339,7 @@ public class Map {
     //var bestD = rc.getID() % 5 < 2 ? (height / 3) * (height / 3) + (width / 3) * (width / 3) : 100000000;
     //var bestD = (height / 3) * (height / 3) + (width / 3) * (width / 3);
     var bestD = 145;
-    if (rc.getType() != UnitType.SPLASHER || rc.getID() % 3 != 0) {
+    if (rc.getType() != UnitType.SPLASHER) {// || rc.getID() % 3 == 2) {
       if (rc.getNumberTowers() < GameConstants.MAX_NUMBER_OF_TOWERS) {
         for (var ruin : ruins) {
           if ((rc.getType() != UnitType.SOLDIER || ruin.enemyTiles == 0 || (rc.getNumberTowers() > 4 && rc.getID() % 7 < 2)) &&
