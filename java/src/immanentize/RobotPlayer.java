@@ -241,6 +241,9 @@ public class RobotPlayer {
                 } else {
                   splasherStartTurn = -1;
                 }
+//                if (mopCount == 0 && map.ruinTarget != null && map.ruinTarget.enemyTiles > 0) {
+//                  mopperChance *= 3.0 / 2;
+//                }
 //                if (nearbyAllies.length > 4 && nearbyFriendlySoldiers <= 1) {
 //                  splasherChance *= 0.8;
 //                  mopperChance *= 0.8;

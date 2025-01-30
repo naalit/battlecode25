@@ -24,8 +24,9 @@ public class Map {
     public UnitType type() throws GameActionException {
       if (typeRound == rc.getRoundNum()) return type;
       typeRound = rc.getRoundNum();
+      var nmoney = rc.getNumberTowers() - 1; //numMoneyTowers + Math.max(0, numUnknownTowers);
 
-      var paintPercent = rc.getNumberTowers() < moneyTarget + 1 ? 0 : 70;
+      var paintPercent = nmoney < moneyTarget ? 0 : 70;
 //      if (rc.getNumberTowers() < moneyTarget + 1) {
 //        type = UnitType.LEVEL_ONE_MONEY_TOWER;
 //      } else {
@@ -42,13 +43,13 @@ public class Map {
 //      if (rc.getNumberTowers() == 3 && !big) paintPercent = 100;
 //      if (rc.getChips() > 10000) paintPercent = 100;
 
-      if (!map.isPaintTower && rc.getNumberTowers() > (moneyTarget + 1) / 2) {
+      if (!map.isPaintTower && nmoney > (moneyTarget) / 2) {
         paintPercent = 80;
       }
 
       type = (hash(center) % 100) >= paintPercent ? UnitType.LEVEL_ONE_MONEY_TOWER : UnitType.LEVEL_ONE_PAINT_TOWER;
 
-      if (rc.getNumberTowers() >= (moneyTarget + 1) && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
+      if (nmoney >= (moneyTarget) && rc.canSenseLocation(center.add(Direction.NORTH)) && rc.senseMapInfo(center.add(Direction.NORTH)).getMark().isSecondary()) {
         type = UnitType.LEVEL_ONE_DEFENSE_TOWER;
       }
       return type;
@@ -171,6 +172,11 @@ public class Map {
   public Tower closestEnemyTower;
   public ResourcePattern closestRP;
   public int[][] visitedTiles = new int[12][12];
+  public int numPaintTowers;
+  public int numMoneyTowers;
+  public int numWatchTowers;
+  /// Can be negative
+  public int numUnknownTowers;
 
   void updateVisited() {
     int cx = rc.getLocation().x / 5, cy = rc.getLocation().y / 5;
@@ -344,6 +350,9 @@ public class Map {
     closestPaintTower = null;
     closestEnemyTower = null;
     isPaintTower = false;
+    numPaintTowers = 0;
+    numMoneyTowers = 0;
+    numWatchTowers = 0;
     for (var tower : towers) {
       rc.setIndicatorDot(tower.loc, 255, 0, 0);
       if (tower.team == rc.getTeam() && (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER || (rc.canSenseLocation(tower.loc) && rc.senseRobotAtLocation(tower.loc).paintAmount >= towerKeepPaint() + MIN_TRANSFER_TOWER))) {
@@ -360,8 +369,12 @@ public class Map {
         if (closestFriendlyTower == null || tower.loc.isWithinDistanceSquared(rc.getLocation(), closestFriendlyTower.loc.distanceSquaredTo(rc.getLocation()))) {
           closestFriendlyTower = tower;
         }
+        if (tower.type == UnitType.LEVEL_ONE_PAINT_TOWER) numPaintTowers += 1;
+        if (tower.type == UnitType.LEVEL_ONE_MONEY_TOWER) numMoneyTowers += 1;
+        if (tower.type == UnitType.LEVEL_ONE_DEFENSE_TOWER) numWatchTowers += 1;
       }
     }
+    numUnknownTowers = rc.getNumberTowers() - (numPaintTowers + numWatchTowers + numMoneyTowers);
 
     if (rc.getType() == UnitType.SOLDIER) {
       closestRP = null;

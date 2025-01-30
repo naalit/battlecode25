@@ -16,28 +16,28 @@ WITH_REVERSE = True
 SAVE_LOCATION = "./trial_logs/"
 #COMMAND = "gradlew"
 COMMAND = "./gradlew"
-MAX_WORKERS = 5
+MAX_WORKERS = 8
 
 # when run mapnames() replace between example and closing bracket
 DEFAULT_MAPS = [
     "AlarmClock",
-#     "Barcode",
+    "Barcode",
 #     "BatSignal",
     "Brat",
-#     "Bread",
+    "Bread",
 #     "Bunny",
     "BunnyGame",
-#     "Castle",
+    "Castle",
 #     "CastleDefense",
     "Circuit",
-#     "Crab",
+    "Crab",
 #     "DefaultHuge",
     "DefaultLarge",
 #     "DefaultMedium",
 #     "DefaultSmall",
     "Dominoes",
 #     "DonkeyKong",
-#     "Filter",
+    "Filter",
     "Flower",
 #     "Fossil",
 #     "FourCorners",
@@ -46,25 +46,25 @@ DEFAULT_MAPS = [
 #     "Jail",
     "Justice",
 #     "Leaf",
-#     "Mirage",
+    "Mirage",
     "Money",
-#     "MoneyTower",
+    "MoneyTower",
 #     "Oasis",
     "Paintball",
 #     "Parking_lot",
-#     "Piglets2",
+    "Piglets2",
     "PlumberGame",
 #     "Portal",
 #     "Racetrack",
     "Restart",
-#     "Rose",
+    "Rose",
 #     "SMILE",
     "SaltyPepper",
 #     "SandyBeach",
-#     "Snowglobe",
+    "Snowglobe",
     "Snowman",
 #     "TargetPractice",
-#     "Terminal",
+    "Terminal",
 #     "TheBest",
     "Thirds",
 #     "UglySweater",
@@ -75,30 +75,30 @@ DEFAULT_MAPS = [
 #     "defensetower",
 #     "fix",
     "galaxy",
-#     "gardenworld",
+    "gardenworld",
 #     "giver",
     "gridworld",
 #     "headphones",
 #     "leavemealone",
     "lighthouse",
 #     "maze",
-#     "memstore",
-    "mit",
-#     "quack",
-#     "rain",
+    "memstore",
+#     "mit",
+    "quack",
+    "rain",
     "roads",
 #     "sayhi",
 #     "shell",
     "sierpinski",
 #     "starburst",
-#     "sunrise",
+    "sunrise",
     "walalilongla",
 #     "windmill",
 #     "yearofthesnake"
 ]
 MAPS_TO_RUN = DEFAULT_MAPS + [
     #"Crossed",
-    "TicTacToe"
+#     "TicTacToe"
 ]
 
 def runmaps():
@@ -188,5 +188,6 @@ def mapnames():
     print(out.strip(" \n,"))
 
 if __name__ == "__main__":
+    #os.popen(f"{COMMAND} build")
     runmaps()
     #mapnames()

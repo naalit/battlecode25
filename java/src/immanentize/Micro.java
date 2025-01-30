@@ -42,19 +42,22 @@ public class Micro {
   }
 
   static Target pickTarget(MicroBot bot) throws GameActionException {
-    // Paint resupply - URGENT
-    if (map.closestPaintTower != null && bot.paint < minPaint() + bot.type.attackCost)
-      return new Target(map.closestPaintTower.loc, 2.0);
-    if (map.closestFriendlyTower != null && bot.paint < minPaint() + bot.type.attackCost)
-      return new Target(map.closestFriendlyTower.loc, 2.0);
-    if (map.closestFriendlyTower != null && bot.type == UnitType.SOLDIER && map.ruinTarget != null
-        && map.ruinTarget.lastSent == -1
-        && nearbyAllies.length == 0 && bot.paint < bot.type.attackCost * (24 - map.ruinTarget.allyTiles) + minPaint())
-      return new Target(map.closestFriendlyTower.loc, 2.0);
-//    if (map.closestFriendlyTower != null && bot.type == UnitType.SOLDIER && map.closestEnemyTower != null
-//        && map.closestEnemyTower.lastSent == -1
-//        && nearbyAllies.length == 0)
-//      return new Target(map.closestFriendlyTower.loc, 2.0);
+    if (bot.type != UnitType.SOLDIER || map.ruinTarget == null || map.ruinTarget.allyTiles < 24 || rc.getNumberTowers() >= map.moneyTarget
+        || rc.senseNearbyRobots(map.ruinTarget.center, 8, rc.getTeam()).length > 0) {
+      // Paint resupply - URGENT
+      if (map.closestPaintTower != null && bot.paint < minPaint() + bot.type.attackCost)
+        return new Target(map.closestPaintTower.loc, 2.0);
+      if (map.closestFriendlyTower != null && bot.paint < minPaint() + bot.type.attackCost)
+        return new Target(map.closestFriendlyTower.loc, 2.0);
+      if (map.closestFriendlyTower != null && bot.type == UnitType.SOLDIER && map.ruinTarget != null
+          && map.ruinTarget.lastSent == -1
+          && nearbyAllies.length == 0 && bot.paint < bot.type.attackCost * (24 - map.ruinTarget.allyTiles) + minPaint())
+        return new Target(map.closestFriendlyTower.loc, 2.0);
+//      if (map.closestFriendlyTower != null && bot.type == UnitType.SOLDIER && map.closestEnemyTower != null
+//          && map.closestEnemyTower.lastSent == -1
+//          && nearbyAllies.length == 0)
+//        return new Target(map.closestFriendlyTower.loc, 2.0);
+    }
 
     // Help out panicking tower
     if (comms.panickingTower != null)
@@ -117,7 +120,8 @@ public class Micro {
 
     if (map.ruinTarget != null && bot.type != UnitType.SOLDIER
         //&& (map.ruinTarget.enemyTiles > 0 || rc.getID() % 4 == 0)
-        && (rc.getID() % 4 <= 1 || !map.isPaintTower/* || rc.getNumberTowers() <= 5*/)
+        && (rc.getID() % 4 <= 1 || !map.isPaintTower/* || rc.getNumberTowers() <= 5*/
+            || (bot.type == UnitType.MOPPER && map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 34) && map.ruinTarget.enemyTiles > 0))
         /*&& doTowers()*/ && !map.ruinTarget.center.isWithinDistanceSquared(bot.startPos, 8)) {
       return new Target(map.ruinTarget.center, 1.0);
     }
